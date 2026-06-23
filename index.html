@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="sq">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Oni-El — Konstruksione Metalike & Energji Diellore</title>
+  <meta name="description" content="Oni-El — Konsulencë dhe prodhim për carports fotovoltaike, kapanone metalike, vila dhe aksesorë saldimi. Durrës, Shqipëri." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Inter', sans-serif; background: #0a0e14; color: #e8eaf0; }
+
+    /* ── NAV ── */
+    .nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(10,14,20,0.97);
+      border-bottom: 1px solid #1e2a38;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 2.5rem; height: 64px;
+    }
+    .logo { font-size: 22px; font-weight: 800; letter-spacing: 3px; color: #fff; text-decoration: none; }
+    .logo span { color: #f4a012; }
+    .nav-links { display: flex; gap: 2rem; }
+    .nav-links a { color: #a0aab8; font-size: 12px; text-decoration: none; letter-spacing: 0.5px; text-transform: uppercase; transition: color .2s; }
+    .nav-links a:hover { color: #f4a012; }
+    .nav-right { display: flex; gap: 0.6rem; align-items: center; }
+    .lang-btn { background: none; border: 1px solid #2e3d50; color: #a0aab8; font-size: 11px; padding: 4px 10px; border-radius: 3px; cursor: pointer; transition: all .2s; }
+    .lang-btn.active { border-color: #f4a012; color: #f4a012; }
+    .nav-cta { background: #f4a012; color: #0a0e14; font-size: 12px; font-weight: 700; padding: 9px 18px; border: none; border-radius: 4px; cursor: pointer; text-transform: uppercase; letter-spacing: .5px; transition: opacity .2s; }
+    .nav-cta:hover { opacity: .9; }
+
+    /* ── HERO ── */
+    .hero {
+      min-height: 520px;
+      background: linear-gradient(135deg, #0a0e14 0%, #0c1828 60%, #0a0e14 100%);
+      border-bottom: 1px solid #1e2a38;
+      display: flex; flex-direction: column; justify-content: center;
+      padding: 6rem 2.5rem 4rem; position: relative; overflow: hidden;
+    }
+    .hero::before {
+      content: ''; position: absolute; top: -100px; right: -100px;
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(244,160,18,.05) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .eyebrow { font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: #f4a012; margin-bottom: 1rem; }
+    .hero h1 { font-size: 48px; font-weight: 800; line-height: 1.1; color: #fff; max-width: 700px; margin-bottom: 1.2rem; }
+    .hero h1 em { font-style: normal; color: #f4a012; }
+    .hero p { font-size: 16px; color: #a0aab8; max-width: 520px; line-height: 1.75; margin-bottom: 2.2rem; }
+    .hero-btns { display: flex; gap: 1rem; flex-wrap: wrap; }
+    .btn-primary { background: #f4a012; color: #0a0e14; font-weight: 700; font-size: 14px; padding: 14px 28px; border: none; border-radius: 4px; cursor: pointer; text-transform: uppercase; letter-spacing: .5px; transition: opacity .2s; }
+    .btn-primary:hover { opacity: .9; }
+    .btn-outline { background: transparent; color: #e8eaf0; font-size: 14px; padding: 14px 28px; border: 1px solid #2e3d50; border-radius: 4px; cursor: pointer; transition: border-color .2s; }
+    .btn-outline:hover { border-color: #f4a012; color: #f4a012; }
+    .hero-stats { display: flex; gap: 3rem; margin-top: 3rem; padding-top: 2rem; border-top: 1px solid #1e2a38; flex-wrap: wrap; }
+    .stat-v { font-size: 28px; font-weight: 800; color: #fff; }
+    .stat-l { font-size: 11px; color: #a0aab8; margin-top: 3px; letter-spacing: .5px; text-transform: uppercase; }
+
+    /* ── SECTIONS ── */
+    section { padding: 5rem 2.5rem; }
+    .sec-eyebrow { font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: #f4a012; margin-bottom: .6rem; }
+    .sec-title { font-size: 30px; font-weight: 700; color: #fff; margin-bottom: .8rem; }
+    .sec-sub { font-size: 14px; color: #a0aab8; line-height: 1.75; max-width: 560px; margin-bottom: 2.5rem; }
+
+    /* ── SERVICES ── */
+    #services { background: #0d1520; border-top: 1px solid #1e2a38; border-bottom: 1px solid #1e2a38; }
+    .grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.2rem; }
+    .svc-card {
+      background: #0a0e14; border: 1px solid #1e2a38; border-radius: 8px; padding: 1.8rem;
+      transition: border-color .2s, transform .2s; position: relative; overflow: hidden;
+    }
+    .svc-card:hover { border-color: #f4a012; transform: translateY(-3px); }
+    .badge { position: absolute; top: 1rem; right: 1rem; font-size: 9px; font-weight: 700; letter-spacing: 1px; color: #0a0e14; background: #f4a012; padding: 3px 7px; border-radius: 3px; text-transform: uppercase; }
+    .svc-icon { width: 44px; height: 44px; background: #0f1e30; border: 1px solid #1e2a38; border-radius: 6px; display: flex; align-items: center; justify-content: center; margin-bottom: 1rem; }
+    .svc-icon i { font-size: 22px; color: #f4a012; }
+    .svc-title { font-size: 16px; font-weight: 700; color: #fff; margin-bottom: .5rem; }
+    .svc-desc { font-size: 13px; color: #a0aab8; line-height: 1.65; margin-bottom: 1.2rem; }
+    .svc-btn { font-size: 11px; font-weight: 700; color: #f4a012; text-transform: uppercase; letter-spacing: .5px; background: none; border: 1px solid #f4a012; padding: 7px 14px; border-radius: 4px; cursor: pointer; transition: all .2s; }
+    .svc-btn:hover { background: #f4a012; color: #0a0e14; }
+
+    /* ── PRODUCTS / ACCESSORIES ── */
+    #products { background: #0a0e14; }
+    .tabs { display: flex; gap: .5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .tab { background: #0d1520; border: 1px solid #1e2a38; color: #a0aab8; font-size: 12px; font-weight: 600; padding: 8px 18px; border-radius: 4px; cursor: pointer; text-transform: uppercase; letter-spacing: .5px; transition: all .2s; }
+    .tab.active { border-color: #f4a012; color: #f4a012; background: rgba(244,160,18,.06); }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    .prod-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.2rem; }
+    .prod-card { background: #0d1520; border: 1px solid #1e2a38; border-radius: 8px; overflow: hidden; transition: border-color .2s, transform .2s; }
+    .prod-card:hover { border-color: #f4a012; transform: translateY(-2px); }
+    .prod-img { background: #0f1e30; height: 130px; display: flex; align-items: center; justify-content: center; border-bottom: 1px solid #1e2a38; position: relative; }
+    .prod-img i { font-size: 46px; color: #1e2a38; }
+    .prod-badge { position: absolute; top: 8px; left: 8px; background: #f4a012; color: #0a0e14; font-size: 9px; font-weight: 700; padding: 3px 7px; border-radius: 3px; text-transform: uppercase; letter-spacing: .5px; }
+    .prod-body { padding: 1.2rem; }
+    .prod-brand { font-size: 10px; letter-spacing: 2px; color: #f4a012; text-transform: uppercase; margin-bottom: .3rem; }
+    .prod-name { font-size: 14px; font-weight: 700; color: #fff; margin-bottom: .4rem; line-height: 1.3; }
+    .spec-row { display: flex; justify-content: space-between; font-size: 11px; padding: 3px 0; border-bottom: 1px solid #0f1e30; }
+    .spec-l { color: #a0aab8; }
+    .spec-v { color: #e8eaf0; font-weight: 500; }
+    .wear-tags { display: flex; flex-wrap: wrap; gap: 4px; margin: .6rem 0; }
+    .wear-tag { font-size: 10px; background: #0f1e30; border: 1px solid #1e2a38; color: #a0aab8; padding: 2px 7px; border-radius: 3px; }
+    .prod-btn { width: 100%; font-size: 11px; font-weight: 700; color: #f4a012; text-transform: uppercase; letter-spacing: .5px; background: none; border: 1px solid #f4a012; padding: 8px; border-radius: 4px; cursor: pointer; margin-top: .8rem; transition: all .2s; }
+    .prod-btn:hover { background: #f4a012; color: #0a0e14; }
+
+    .cert-card { background: #0d1520; border: 1px solid #1e2a38; border-radius: 8px; padding: 1.5rem; }
+    .cert-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: .8rem; }
+    .cert-prod-name { font-size: 15px; font-weight: 700; color: #fff; }
+    .cert-no { font-size: 10px; color: #4a5568; font-family: monospace; }
+    .cert-ok { display: flex; align-items: center; gap: 5px; font-size: 10px; color: #4ade80; margin-top: .8rem; }
+
+    .hyp-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
+    .hyp-logo { background: #c8102e; color: #fff; font-size: 11px; font-weight: 800; padding: 7px 12px; border-radius: 4px; letter-spacing: 1px; }
+    .hyp-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; }
+    .hyp-card { background: #0d1520; border: 1px solid #1e2a38; border-radius: 6px; padding: 1.2rem; }
+    .hyp-model { font-size: 14px; font-weight: 700; color: #fff; margin-bottom: .2rem; }
+    .hyp-type { font-size: 11px; color: #f4a012; margin-bottom: .5rem; }
+    .hyp-desc { font-size: 12px; color: #a0aab8; line-height: 1.5; }
+
+    /* ── PROCESS ── */
+    #process { background: #0d1520; border-top: 1px solid #1e2a38; border-bottom: 1px solid #1e2a38; }
+    .steps { display: flex; flex-wrap: wrap; margin-top: 2rem; }
+    .step { flex: 1; min-width: 160px; padding: 1.5rem 1.2rem; border-left: 2px solid #1e2a38; }
+    .step:first-child { border-left-color: #f4a012; }
+    .step-num { font-size: 10px; font-weight: 700; letter-spacing: 2px; color: #f4a012; text-transform: uppercase; margin-bottom: .4rem; }
+    .step-t { font-size: 14px; font-weight: 700; color: #fff; margin-bottom: .3rem; }
+    .step-d { font-size: 12px; color: #a0aab8; line-height: 1.6; }
+
+    /* ── PARTNERS ── */
+    #partners { background: #0a0e14; }
+    .partner-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.2rem; }
+    .partner-card { background: #0d1520; border: 1px solid #1e2a38; border-radius: 8px; padding: 1.5rem; transition: border-color .2s; }
+    .partner-card:hover { border-color: #f4a012; }
+    .partner-flag { font-size: 22px; margin-bottom: .5rem; }
+    .partner-name { font-size: 15px; font-weight: 700; color: #fff; margin-bottom: .2rem; }
+    .partner-role { font-size: 11px; color: #f4a012; margin-bottom: .6rem; letter-spacing: .5px; text-transform: uppercase; }
+    .partner-desc { font-size: 12px; color: #a0aab8; line-height: 1.65; }
+    .partner-link { display: inline-block; margin-top: .8rem; font-size: 11px; color: #f4a012; text-decoration: none; border-bottom: 1px solid rgba(244,160,18,.3); }
+    .partner-link:hover { border-bottom-color: #f4a012; }
+
+    /* ── CTA ── */
+    #contact { background: #0f1e30; border-top: 1px solid #1e2a38; text-align: center; }
+    #contact h2 { font-size: 34px; font-weight: 800; color: #fff; margin-bottom: .8rem; }
+    #contact p { font-size: 15px; color: #a0aab8; margin-bottom: 2rem; }
+    .cta-big { background: #f4a012; color: #0a0e14; font-size: 16px; font-weight: 800; padding: 17px 38px; border: none; border-radius: 4px; cursor: pointer; text-transform: uppercase; letter-spacing: .5px; transition: opacity .2s; }
+    .cta-big:hover { opacity: .9; }
+
+    /* ── FOOTER ── */
+    footer { background: #060a0f; border-top: 1px solid #1e2a38; padding: 2.5rem 2.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
+    .f-logo { font-size: 18px; font-weight: 800; letter-spacing: 3px; color: #fff; }
+    .f-logo span { color: #f4a012; }
+    .f-info { font-size: 11px; color: #4a5568; }
+
+    /* ── MODAL ── */
+    .modal-ov { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.75); z-index: 200; align-items: center; justify-content: center; }
+    .modal-ov.open { display: flex; }
+    .modal { background: #0d1520; border: 1px solid #1e2a38; border-radius: 10px; padding: 2rem; max-width: 440px; width: 90%; }
+    .modal h3 { font-size: 18px; font-weight: 700; color: #fff; margin-bottom: .4rem; }
+    .modal p { font-size: 12px; color: #a0aab8; margin-bottom: 1.2rem; }
+    .modal input, .modal select, .modal textarea {
+      width: 100%; background: #0a0e14; border: 1px solid #1e2a38; border-radius: 4px;
+      padding: 9px 12px; color: #e8eaf0; font-size: 13px; margin-bottom: .7rem; outline: none; font-family: inherit;
+    }
+    .modal input:focus, .modal select:focus, .modal textarea:focus { border-color: #f4a012; }
+    .modal textarea { height: 80px; resize: vertical; }
+    .modal-btns { display: flex; gap: .8rem; }
+    .modal-submit { flex: 1; background: #f4a012; color: #0a0e14; font-weight: 700; padding: 11px; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; transition: opacity .2s; }
+    .modal-submit:hover { opacity: .9; }
+    .modal-cancel { background: none; border: 1px solid #2e3d50; color: #a0aab8; padding: 11px 16px; border-radius: 4px; cursor: pointer; font-size: 13px; }
+    .modal-cancel:hover { border-color: #a0aab8; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+      .hero h1 { font-size: 32px; }
+      .hero-stats { gap: 1.5rem; }
+      section { padding: 3rem 1.2rem; }
+      .nav { padding: 0 1.2rem; }
+      footer { flex-direction: column; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <a href="#" class="logo">ONI<span>-</span>EL</a>
+  <div class="nav-links">
+    <a href="#services">Shërbimet</a>
+    <a href="#products">Produktet</a>
+    <a href="#partners">Partnerët</a>
+    <a href="#contact">Kontakt</a>
+  </div>
+  <div class="nav-right">
+    <button class="lang-btn active" onclick="setLang('al',this)">AL</button>
+    <button class="lang-btn" onclick="setLang('en',this)">EN</button>
+    <button class="nav-cta" onclick="openModal('general')">Kërko Preventiv</button>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <p class="eyebrow">Inxhinieri Mekanike · Konsulencë · Prodhim · Durrës, Shqipëri</p>
+  <h1>Konstruksione Metalike<br>&amp; <em>Energji Diellore</em></h1>
+  <p>10 vjet eksperiencë reale në blerje, shitje dhe prodhim industrial. Carports fotovoltaike, kapanone metalike, vila dhe aksesorë profesionalë.</p>
+  <div class="hero-btns">
+    <button class="btn-primary" onclick="openModal('general')">Kërko Preventiv Falas →</button>
+    <button class="btn-outline" onclick="document.getElementById('services').scrollIntoView({behavior:'smooth'})">Zbulo Shërbimet</button>
+  </div>
+  <div class="hero-stats">
+    <div><div class="stat-v">10+</div><div class="stat-l">Vjet Eksperiencë</div></div>
+    <div><div class="stat-v">2</div><div class="stat-l">Partnerë Europianë</div></div>
+    <div><div class="stat-v">360°</div><div class="stat-l">Shërbim i Plotë</div></div>
+    <div><div class="stat-v">CE</div><div class="stat-l">Produkte të Certifikuara</div></div>
+  </div>
+</div>
+
+<!-- SERVICES -->
+<section id="services">
+  <p class="sec-eyebrow">Çfarë ofrojmë</p>
+  <h2 class="sec-title">Shërbimet Tona</h2>
+  <p class="sec-sub">Nga konsulenca e parë deri te dorëzimi i projektit — mbulojmë çdo hap me ekspertizë teknike.</p>
+  <div class="grid-4">
+    <div class="svc-card">
+      <span class="badge">Prioritet</span>
+      <div class="svc-icon"><i class="ti ti-solar-panel"></i></div>
+      <div class="svc-title">Carports & Suportet Fotovoltaike</div>
+      <div class="svc-desc">Projektim dhe prodhim strukturash çeliku për panele diellore. Nga parkingjet e vogla deri te flota komerciale — çdo madhësi dhe konfigurim.</div>
+      <button class="svc-btn" onclick="openModal('carport')">Kërko Preventiv</button>
+    </div>
+    <div class="svc-card">
+      <span class="badge">Prioritet</span>
+      <div class="svc-icon"><i class="ti ti-building-warehouse"></i></div>
+      <div class="svc-title">Kapanone & Ndërtesa Metalike</div>
+      <div class="svc-desc">Vila 2-kateshe dhe magazina industriale me konstruksion çeliku. Design i personalizuar, dokumentacion teknik, montim i plotë.</div>
+      <button class="svc-btn" onclick="openModal('building')">Kërko Preventiv</button>
+    </div>
+    <div class="svc-card">
+      <div class="svc-icon"><i class="ti ti-flame"></i></div>
+      <div class="svc-title">Aksesorë Saldimi & Prerje Plazme</div>
+      <div class="svc-desc">Pistoletë MIG/MAG dhe TIG (MKOW), tela saldimi të certifikuara, aksesorë Hypertherm për prerje plazme.</div>
+      <button class="svc-btn" onclick="document.getElementById('products').scrollIntoView({behavior:'smooth'})">Shiko Produktet</button>
+    </div>
+    <div class="svc-card">
+      <div class="svc-icon"><i class="ti ti-handshake"></i></div>
+      <div class="svc-title">Konsulencë & Ndërmjetësim</div>
+      <div class="svc-desc">Konsulencë teknike dhe tregtare. Akses direkt tek Aluminio di Qualità (IT) dhe Arnikon (TR) me komisione të drejtpërdrejta.</div>
+      <button class="svc-btn" onclick="openModal('general')">Na Kontakto</button>
+    </div>
+  </div>
+</section>
+
+<!-- PRODUCTS -->
+<section id="products">
+  <p class="sec-eyebrow">Produktet në shitje</p>
+  <h2 class="sec-title">Katalogu i Aksesorëve</h2>
+  <p class="sec-sub">Pistoletë saldimi MIG/MAG dhe TIG, tela saldimi të certifikuara dhe aksesorë Hypertherm — me çmime konkurruese.</p>
+
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('mig',this)">Pistoletë MIG/MAG</button>
+    <button class="tab" onclick="showTab('tig',this)">Pistoletë TIG</button>
+    <button class="tab" onclick="showTab('wire',this)">Tela Saldimi</button>
+    <button class="tab" onclick="showTab('plasma',this)">Aksesorë Plazme</button>
+  </div>
+
+  <!-- MIG/MAG -->
+  <div class="tab-content active" id="tab-mig">
+    <div class="prod-grid">
+      <div class="prod-card">
+        <div class="prod-img"><i class="ti ti-tool"></i><span class="prod-badge">MIG / MAG</span></div>
+        <div class="prod-body">
+          <div class="prod-brand">MKOW · 迈克威</div>
+          <div class="prod-name">Pistoletë MIG/MAG Air Cooled</div>
+          <div style="font-size:11px;color:#4a5568;font-family:monospace;margin-bottom:.6rem;">LD 350A — Torch 3M / 5M</div>
+          <div class="spec-row"><span class="spec-l">Rating</span><span class="spec-v">350A CO₂ / 300A Mixed</span></div>
+          <div class="spec-row"><span class="spec-l">Duty Cycle</span><span class="spec-v">60%</span></div>
+          <div class="spec-row"><span class="spec-l">Wire Size</span><span class="spec-v">Ø 0.9 – 1.2 mm</span></div>
+          <div class="spec-row"><span class="spec-l">Kompatibl</span><span class="spec-v">Panasonic LD 350A</span></div>
+          <div class="spec-row"><span class="spec-l">Gjatësia</span><span class="spec-v">3M ose 5M</span></div>
+          <button class="prod-btn" onclick="openModal('accessories')">Kërko Çmim</button>
+        </div>
+      </div>
+      <div class="prod-card">
+        <div class="prod-img"><i class="ti ti-adjustments"></i><span class="prod-badge">Wear Parts</span></div>
+        <div class="prod-body">
+          <div class="prod-brand">MKOW · Pjesë Konsumi</div>
+          <div class="prod-name">Wear Parts — LD 350A MIG/MAG</div>
+          <div style="font-size:11px;color:#4a5568;font-family:monospace;margin-bottom:.6rem;">Contact Tips / Nozzle / Swan Neck</div>
+          <div class="wear-tags">
+            <span class="wear-tag">Nozzle Ø13mm</span>
+            <span class="wear-tag">Gas Diffuser Ceramic</span>
+            <span class="wear-tag">Contact Tip M6×45</span>
+            <span class="wear-tag">E-Cu / CuCrZr</span>
+            <span class="wear-tag">Insulator Black/Yellow</span>
+            <span class="wear-tag">Swan Neck</span>
+            <span class="wear-tag">Tip Holder</span>
+          </div>
+          <div class="spec-row"><span class="spec-l">Contact Tips</span><span class="spec-v">Ø 0.9 / 1.0 / 1.2 mm</span></div>
+          <div class="spec-row"><span class="spec-l">Materiali</span><span class="spec-v">E-Cu ose CuCrZr</span></div>
+          <button class="prod-btn" onclick="openModal('accessories')">Kërko Çmim</button>
+        </div>
+      </div>
+      <div class="prod-card">
+        <div class="prod-img"><i class="ti ti-plug"></i><span class="prod-badge">Liner & Nut</span></div>
+        <div class="prod-body">
+          <div class="prod-brand">MKOW · Liner</div>
+          <div class="prod-name">Liner & Kapilarë MIG/MAG</div>
+          <div style="font-size:11px;color:#4a5568;font-family:monospace;margin-bottom:.6rem;">Ø 1.0–1.2 mm</div>
+          <div class="spec-row"><span class="spec-l">Nut</span><span class="spec-v">9/16-18 UNF</span></div>
+          <div class="spec-row"><span class="spec-l">Liner 3.5M</span><span class="spec-v">Ø 1.0–1.2 mm</span></div>
+          <div class="spec-row"><span class="spec-l">Liner 5.5M</span><span class="spec-v">Ø 1.0–1.2 mm</span></div>
+          <div class="spec-row"><span class="spec-l">Control Plug</span><span class="spec-v">2-pin</span></div>
+          <button class="prod-btn" onclick="openModal('accessories')">Kërko Çmim</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TIG -->
+  <div class="tab-content" id="tab-tig">
+    <div class="prod-grid">
+      <div class="prod-card">
+        <div class="prod-img"><i class="ti ti-bolt"></i><span class="prod-badge">TIG Water Cooled</span></div>
+        <div class="prod-body">
+          <div class="prod-brand">MKOW · 27 Series</div>
+          <div class="prod-name">Pistoletë TIG Water Cooled WP-27</div>
+          <div style="font-size:11px;color:#4a5568;font-family:monospace;margin-bottom:.6rem;">WP-27 / WP-27L — 500A</div>
+          <div class="spec-row"><span class="spec-l">Rating</span><span class="spec-v">500A DC / 60A AC</span></div>
+          <div class="spec-row"><span class="spec-l">Duty Cycle</span><span class="spec-v">100%</span></div>
+          <div class="spec-row"><span class="spec-l">Elektroda</span><span class="spec-v">Ø 6.4 mm</span></div>
+          <div class="spec-row"><span class="spec-l">Torch Body</span><span class="spec-v">8" (20cm) ose 20" (50cm)</span></div>
+          <div class="wear-tags">
+            <span class="wear-tag">Collet 1.6/2.4/3.2/4.0mm</span>
+            <span class="wear-tag">Gas Lens</span>
+            <span class="wear-tag">Ceramic Nozzle</span>
+            <span class="wear-tag">Gasket 57N56</span>
+          </div>
+          <button class="prod-btn" onclick="openModal('accessories')">Kërko Çmim</button>
+        </div>
+      </div>
+      <div class="prod-card">
+        <div class="prod-img"><i class="ti ti-bolt"></i><span class="prod-badge">TIG Air Cooled</span></div>
+        <div class="prod-body">
+          <div class="prod-brand">MKOW · QQ Series</div>
+          <div class="prod-name">Pistoletë TIG Air Cooled</div>
+          <div style="font-size:11px;color:#4a5568;font-family:monospace;margin-bottom:.6rem;">QQ-150A / QQ-300A</div>
+          <div class="spec-row"><span class="spec-l">Model 1</span><span class="spec-v">QQ-150A</span></div>
+          <div class="spec-row"><span class="spec-l">Model 2</span><span class="spec-v">QQ-300A</span></div>
+          <div class="spec-row"><span class="spec-l">Lloji</span><span class="spec-v">Air Cooled, kompakt</span></div>
+          <button class="prod-btn" onclick="openModal('accessories')">Kërko Çmim</button>
+        </div>
+      </div>
+      <div class="prod-card">
+        <div class="prod-img"><i class="ti ti-robot"></i><span class="prod-badge">TIG Auto</span></div>
+        <div class="prod-body">
+          <div class="prod-brand">MKOW · AT Series</div>
+          <div class="prod-name">Pistoletë TIG Automatike AT 420</div>
+          <div style="font-size:11px;color:#4a5568;font-family:monospace;margin-bottom:.6rem;">AT 420 / AT 420S — për TBI</div>
+          <div class="spec-row"><span class="spec-l">Model</span><span class="spec-v">AT 420 / 420S</span></div>
+          <div class="spec-row"><span class="spec-l">Aplikimi</span><span class="spec-v">Automatizim, robotikë</span></div>
+          <div class="spec-row"><span class="spec-l">Kompatibël</span><span class="spec-v">TBI Systems</span></div>
+          <button class="prod-btn" onclick="openModal('accessories')">Kërko Çmim</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- WIRE -->
+  <div class="tab-content" id="tab-wire">
+    <div class="prod-grid">
+      <div class="cert-card">
+        <div class="cert-header">
+          <div>
+            <div class="prod-brand">Tel Saldimi Solid MIG</div>
+            <div class="cert-prod-name">G3Si1 — Ø 1.2 mm</div>
+          </div>
+          <div class="cert-no">YC07/26 0169</div>
+        </div>
+        <div class="spec-row"><span class="spec-l">Standard</span><span class="spec-v">GB/T8110-2020</span></div>
+        <div class="spec-row"><span class="spec-l">Yield Strength</span><span class="spec-v">432 MPa (≥390)</span></div>
+        <div class="spec-row"><span class="spec-l">Tensile Strength</span><span class="spec-v">528 MPa (490–670)</span></div>
+        <div class="spec-row"><span class="spec-l">Elongation</span><span class="spec-v">28.5% (≥18%)</span></div>
+        <div class="spec-row"><span class="spec-l">Impact -30°C</span><span class="spec-v">115 J (≥27)</span></div>
+        <div class="spec-row"><span class="spec-l">X-Ray</span><span class="spec-v">Klasi I</span></div>
+        <div class="cert-ok"><i class="ti ti-circle-check"></i> Certifikatë Zyrtare Cilësie</div>
+        <button class="prod-btn" onclick="openModal('accessories')">Kërko Çmim</button>
+      </div>
+      <div class="cert-card">
+        <div class="cert-header">
+          <div>
+            <div class="prod-brand">Tel Saldimi Flux-Core FCAW</div>
+            <div class="cert-prod-name">E70C-6M — Ø 1.2 mm</div>
+          </div>
+          <div class="cert-no">YC02/250105</div>
+        </div>
+        <div class="spec-row"><span class="spec-l">Standard</span><span class="spec-v">GB/T10045-2018</span></div>
+        <div class="spec-row"><span class="spec-l">Yield Strength</span><span class="spec-v">448 MPa (≥390)</span></div>
+        <div class="spec-row"><span class="spec-l">Tensile Strength</span><span class="spec-v">522 MPa (490–670)</span></div>
+        <div class="spec-row"><span class="spec-l">Elongation</span><span class="spec-v">30.0% (≥18%)</span></div>
+        <div class="spec-row"><span class="spec-l">Gaz mbrojtës</span><span class="spec-v">CO₂</span></div>
+        <div class="spec-row"><span class="spec-l">X-Ray</span><span class="spec-v">Klasi I</span></div>
+        <div class="cert-ok"><i class="ti ti-circle-check"></i> Certifikatë Zyrtare Cilësie</div>
+        <button class="prod-btn" onclick="openModal('accessories')">Kërko Çmim</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PLASMA -->
+  <div class="tab-content" id="tab-plasma">
+    <div class="hyp-header">
+      <div class="hyp-logo">HYPERTHERM</div>
+      <div>
+        <div style="font-size:14px;font-weight:700;color:#fff;">Aksesorë Prerje Plazme</div>
+        <div style="font-size:12px;color:#a0aab8;">Sisteme XPR · HPRXD · MAXPRO200 — consumables &amp; PM kits</div>
+      </div>
+    </div>
+    <div class="hyp-grid">
+      <div class="hyp-card">
+        <div class="hyp-model">XPR300 / XPR170</div>
+        <div class="hyp-type">X-Definition · Sistemi Kryesor</div>
+        <div class="hyp-desc">Elektroda, nozzle, shield cap, swirl ring — 30A deri 300A. Çelik, inox, alumin.</div>
+        <button class="prod-btn" style="font-size:10px;" onclick="openModal('accessories')">Kërko</button>
+      </div>
+      <div class="hyp-card">
+        <div class="hyp-model">HPRXD 130–800A</div>
+        <div class="hyp-type">HyPerformance · Standard &amp; Cartridge</div>
+        <div class="hyp-desc">SilverPlus electrode — jetëgjatësi 2x. Cartridge: 1 pjesë zëvendëson 5 standard.</div>
+        <button class="prod-btn" style="font-size:10px;" onclick="openModal('accessories')">Kërko</button>
+      </div>
+      <div class="hyp-card">
+        <div class="hyp-model">MAXPRO200</div>
+        <div class="hyp-type">LongLife Air &amp; O₂</div>
+        <div class="hyp-desc">50A–200A, duty cycle 100%. Bevel ekstrem 66.5°. Consumables Air/O₂/N₂.</div>
+        <button class="prod-btn" style="font-size:10px;" onclick="openModal('accessories')">Kërko</button>
+      </div>
+      <div class="hyp-card">
+        <div class="hyp-model">PM Kits — Mirëmbajtje</div>
+        <div class="hyp-type">Preventive Maintenance</div>
+        <div class="hyp-desc">Torch rebuild kit, filtër coolant, o-ring, relay, kontaktor — për të gjitha sistemet.</div>
+        <button class="prod-btn" style="font-size:10px;" onclick="openModal('accessories')">Kërko</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PROCESS -->
+<section id="process">
+  <p class="sec-eyebrow">Si punojmë</p>
+  <h2 class="sec-title">Procesi Ynë</h2>
+  <div class="steps">
+    <div class="step"><div class="step-num">01</div><div class="step-t">Konsultim Fillestar</div><div class="step-d">Analizojmë nevojat, lokacionin dhe kërkesat teknike tuaja.</div></div>
+    <div class="step"><div class="step-num">02</div><div class="step-t">Preventiv &amp; Design</div><div class="step-d">Vizatime teknike, lista materialesh dhe ofertë e detajuar.</div></div>
+    <div class="step"><div class="step-num">03</div><div class="step-t">Kontratë &amp; Leje</div><div class="step-d">Mbështetje me dokumentacionin ligjor dhe lejet e nevojshme.</div></div>
+    <div class="step"><div class="step-num">04</div><div class="step-t">Prodhim &amp; Montim</div><div class="step-d">Ekip i kualifikuar — nga themelet te dorëzimi final.</div></div>
+  </div>
+</section>
+
+<!-- PARTNERS -->
+<section id="partners">
+  <p class="sec-eyebrow">Bashkëpunëtorët</p>
+  <h2 class="sec-title">Partnerët Tanë</h2>
+  <p class="sec-sub">Akses direkt tek prodhuesit europianë me cilësi të verifikuar dhe certifikuar.</p>
+  <div class="partner-grid">
+    <div class="partner-card">
+      <div class="partner-flag">🇮🇹</div>
+      <div class="partner-name">Aluminio di Qualità</div>
+      <div class="partner-role">Prodhues · Itali</div>
+      <div class="partner-desc">Profile dhe komponente alumini me cilësi industriale të lartë. Oni-El ofron ndërmjetësim direkt me komisione.</div>
+      <a class="partner-link" href="https://www.alluminiodiqualita.it/" target="_blank" rel="noopener">alluminiodiqualita.it →</a>
+    </div>
+    <div class="partner-card">
+      <div class="partner-flag">🇹🇷</div>
+      <div class="partner-name">Arnikon</div>
+      <div class="partner-role">Prodhues · Turqi</div>
+      <div class="partner-desc">Zgjidhje çeliku dhe metalike për ndërtim industrial dhe komercial. Akses preferencial nëpërmjet Oni-El.</div>
+      <a class="partner-link" href="https://www.arnikon.com/" target="_blank" rel="noopener">arnikon.com →</a>
+    </div>
+    <div class="partner-card">
+      <div class="partner-flag">🇦🇱</div>
+      <div class="partner-name">Europa &amp; Eurosteel Shpk</div>
+      <div class="partner-role">Eksperiencë Vendore</div>
+      <div class="partner-desc">10 vjet bashkëpunim aktiv në blerje, shitje dhe prodhim metalik. Rrjet i konsoliduar lokal dhe rajonal.</div>
+    </div>
+    <div class="partner-card">
+      <div class="partner-flag">🇺🇸</div>
+      <div class="partner-name">Hypertherm Associates</div>
+      <div class="partner-role">Aksesorë Plazme</div>
+      <div class="partner-desc">Distributor aksesoresh për sisteme prerje plazme — XPR, HPRXD, MAXPRO200 dhe sisteme legacy.</div>
+      <a class="partner-link" href="https://www.hypertherm.com/" target="_blank" rel="noopener">hypertherm.com →</a>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACT / CTA -->
+<section id="contact">
+  <h2>Gati të Filloni Projektin Tuaj?</h2>
+  <p>Na dërgoni kërkesën dhe do t'ju kthejmë përgjigje brenda 24 orësh.</p>
+  <button class="cta-big" onclick="openModal('general')">Kërko Preventiv Falas →</button>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="f-logo">ONI<span>-</span>EL</div>
+  <div class="f-info">Inxhinieri Mekanike &amp; Konstruksione Metalike · Durrës, Shqipëri</div>
+  <div class="f-info">© 2025 Oni-El · Të gjitha të drejtat e rezervuara</div>
+</footer>
+
+<!-- MODAL -->
+<div class="modal-ov" id="modal" onclick="closeOuter(event)">
+  <div class="modal">
+    <h3 id="m-title">Kërko Preventiv</h3>
+    <p>Plotësoni formularin dhe do t'ju kontaktojmë brenda 24 orësh.</p>
+    <input type="text" placeholder="Emri juaj *" />
+    <input type="tel" placeholder="Telefon ose Email *" />
+    <select id="m-svc">
+      <option value="">Zgjidh shërbimin...</option>
+      <option>Carport / Suport Fotovoltaik</option>
+      <option>Kapanonë / Ndërtesë Metalike</option>
+      <option>Pistoletë MIG/MAG — MKOW</option>
+      <option>Pistoletë TIG — MKOW</option>
+      <option>Tel Saldimi (G3Si1 / E70C-6M)</option>
+      <option>Aksesorë Hypertherm Plazme</option>
+      <option>Konsulencë &amp; Ndërmjetësim</option>
+    </select>
+    <textarea placeholder="Përshkruani projektin ose kërkesën tuaj..."></textarea>
+    <div class="modal-btns">
+      <button class="modal-cancel" onclick="closeModal()">Anulo</button>
+      <button class="modal-submit" onclick="closeModal()">Dërgo Kërkesën →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  function showTab(id, btn) {
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('tab-' + id).classList.add('active');
+    btn.classList.add('active');
+  }
+  function openModal(type) {
+    const titles = {
+      general: 'Kërko Preventiv',
+      carport: 'Preventiv — Carport & Fotovoltaik',
+      building: 'Preventiv — Kapanonë & Ndërtesa',
+      accessories: 'Kërko Çmim — Aksesorë'
+    };
+    document.getElementById('m-title').textContent = titles[type] || 'Kërko Preventiv';
+    document.getElementById('modal').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeModal() {
+    document.getElementById('modal').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+  function closeOuter(e) { if (e.target.id === 'modal') closeModal(); }
+  function setLang(lang, btn) {
+    document.querySelectorAll('.lang-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+</script>
+</body>
+</html>
