@@ -1732,6 +1732,50 @@
     }
   });
 
+  // ==== Make.com Webhook Integration ====
+  // Dergon te dhenat e formularit paralelisht edhe te Make.com,
+  // pervec Formspree (per email). Nuk ndalon dergimin normal te formularit.
+  var MAKE_WEBHOOK_URL = 'https://hook.eu1.make.com/79iq9kr5dvdiug77xbshua0wnhwtm574';
+
+  function sendToMakeWebhook(form) {
+    try {
+      var formData = new FormData(form);
+      var payload = {};
+      formData.forEach(function (value, key) {
+        payload[key] = value;
+      });
+      payload._source = 'oni-el.github.io';
+      payload._page = window.location.href;
+      payload._timestamp = new Date().toISOString();
+
+      fetch(MAKE_WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      }).catch(function (err) {
+        console.warn('Make.com webhook error:', err);
+      });
+    } catch (e) {
+      console.warn('Make.com webhook error:', e);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    var contactForm = document.getElementById('contact-form');
+    if (contactForm) {
+      contactForm.addEventListener('submit', function () {
+        sendToMakeWebhook(contactForm);
+      });
+    }
+    var modalForm = document.getElementById('modal-form');
+    if (modalForm) {
+      modalForm.addEventListener('submit', function () {
+        sendToMakeWebhook(modalForm);
+      });
+    }
+  });
+  // ==== Fund Make.com Webhook Integration ====
+
 </script>
 </body>
 </html>
