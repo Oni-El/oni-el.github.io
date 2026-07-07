@@ -1391,7 +1391,7 @@
         <p>Do t'ju kontaktojmë brenda 24 orësh në <strong>kycykubledi1@gmail.com</strong></p>
       </div>
       <div data-fs-error class="fs-form-error" style="display:none;color:#f87171;font-size:13px;margin-bottom:.8rem;padding:.8rem;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);border-radius:4px"></div>
-      <form id="contact-form" action="https://formspree.io/f/xpqgpqpo" method="POST">
+      <form id="contact-form" action="https://formspree.io/f/xpqgpqpo" method="POST" enctype="multipart/form-data">
         <input type="hidden" name="_subject" value="Kërkesë e re — Oni-El"/>
         <input type="hidden" name="nipt" value="F00101475L"/>
         <input type="hidden" name="brand" value="Oni-El"/>
@@ -1446,6 +1446,10 @@
           <label>Mesazhi juaj</label>
           <textarea name="message" placeholder="Përshkruani projektin, dimensionet ose kërkesën tuaj specifike..." data-fs-field></textarea>
           <span data-fs-error="message" style="color:#f87171;font-size:11px"></span>
+        </div>
+        <div class="form-group">
+          <label>Bashkëngjit foto/dokument (opsionale)</label>
+          <input type="file" name="attachment" accept="image/*,.pdf,.doc,.docx" />
         </div>
         <button type="submit" class="form-submit" data-fs-submit-btn>
           <span class="btn-text">Dërgo Kërkesën →</span>
@@ -1538,13 +1542,14 @@
         <button onclick="closeModal()" class="svc-btn" style="margin-top:1rem">Mbyll</button>
       </div>
       <div data-fs-error style="display:none;color:#f87171;font-size:12px;margin-bottom:.6rem;padding:.6rem;background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2);border-radius:4px"></div>
-      <form id="modal-form" action="https://formspree.io/f/xpqgpqpo" method="POST">
+      <form id="modal-form" action="https://formspree.io/f/xpqgpqpo" method="POST" enctype="multipart/form-data">
         <input type="hidden" name="_subject" value="Kërkesë çmimi — Oni-El"/>
         <div class="form-group"><label>Emri *</label><input type="text" name="name" required placeholder="Emri juaj" data-fs-field/><span data-fs-error="name" style="color:#f87171;font-size:11px"></span></div>
         <div class="form-group"><label>Email *</label><input type="email" name="email" required placeholder="email@juaj.com" data-fs-field/><span data-fs-error="email" style="color:#f87171;font-size:11px"></span></div>
         <div class="form-group"><label>Telefon</label><input type="tel" name="phone" placeholder="+355 69 xxx xxxx"/></div>
         <div class="form-group"><label>Produkti / Shërbimi</label><input type="text" name="product" id="m-product"/></div>
         <div class="form-group"><label>Detaje</label><textarea name="message" placeholder="Specifikime, dimensione, sasi..." data-fs-field></textarea></div>
+        <div class="form-group"><label>Bashkëngjit foto/dokument (opsionale)</label><input type="file" name="attachment" accept="image/*,.pdf,.doc,.docx" /></div>
         <div class="modal-btns">
           <button type="button" class="modal-cancel" onclick="closeModal()">Anulo</button>
           <button type="submit" class="form-submit" style="margin-top:0;flex:1" data-fs-submit-btn>Dërgo →</button>
@@ -1742,7 +1747,14 @@
       var formData = new FormData(form);
       var payload = {};
       formData.forEach(function (value, key) {
-        payload[key] = value;
+        if (value instanceof File) {
+          if (value.name) {
+            payload.attachmentName = value.name;
+            payload.hasAttachment = true;
+          }
+        } else {
+          payload[key] = value;
+        }
       });
       payload._source = 'oni-el.github.io';
       payload._page = window.location.href;
