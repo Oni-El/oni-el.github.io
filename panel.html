@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="sq">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Oni-El — Panel Dokumentesh</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #0f1420;
+    color: #e8e8ef;
+    margin: 0;
+    padding: 24px 16px 60px;
+  }
+  .wrap { max-width: 640px; margin: 0 auto; }
+  h1 {
+    font-size: 1.4rem;
+    margin-bottom: 4px;
+  }
+  h1 span { color: #f5a623; }
+  p.sub { color: #9a9ab0; margin-top: 0; margin-bottom: 28px; font-size: 0.9rem; }
+  .card {
+    background: #171d2e;
+    border: 1px solid #262e45;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 18px;
+  }
+  label {
+    display: block;
+    font-size: 0.85rem;
+    color: #b8b8cc;
+    margin-bottom: 6px;
+    margin-top: 14px;
+  }
+  label:first-child { margin-top: 0; }
+  input, select, textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid #2e3752;
+    background: #0f1420;
+    color: #fff;
+    font-size: 0.95rem;
+    font-family: inherit;
+  }
+  textarea { min-height: 70px; resize: vertical; }
+  input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: #f5a623;
+  }
+  .row { display: flex; gap: 12px; }
+  .row > div { flex: 1; }
+  .doctype-buttons {
+    display: flex;
+    gap: 8px;
+    margin-top: 6px;
+  }
+  .doctype-buttons button {
+    flex: 1;
+    padding: 12px 8px;
+    border-radius: 8px;
+    border: 1px solid #2e3752;
+    background: #0f1420;
+    color: #b8b8cc;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.15s;
+  }
+  .doctype-buttons button.active {
+    background: #f5a623;
+    border-color: #f5a623;
+    color: #16161d;
+    font-weight: 600;
+  }
+  .proforma-only { display: none; }
+  .proforma-only.show { display: block; }
+  button.submit {
+    width: 100%;
+    padding: 14px;
+    border-radius: 8px;
+    border: none;
+    background: #f5a623;
+    color: #16161d;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    margin-top: 20px;
+  }
+  button.submit:disabled { opacity: 0.6; cursor: not-allowed; }
+  button.submit:active { transform: scale(0.98); }
+  .status {
+    margin-top: 16px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    display: none;
+  }
+  .status.ok { display: block; background: #14351f; color: #6fdc8c; border: 1px solid #2a5c3a; }
+  .status.err { display: block; background: #3a1616; color: #ff8b8b; border: 1px solid #5c2a2a; }
+  .hint { font-size: 0.78rem; color: #6b6b85; margin-top: 4px; }
+  .total-box {
+    margin-top: 14px;
+    padding: 12px;
+    background: #0f1420;
+    border-radius: 8px;
+    border: 1px dashed #2e3752;
+    text-align: right;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #f5a623;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>ONI<span>-EL</span> — Panel Dokumentesh</h1>
+  <p class="sub">Vetëm për përdorim të brendshëm. Dërgo Ofertë, Konfirmim Porosie, ose Faturë Proformë direkt nga këtu.</p>
+
+  <form id="docForm">
+    <div class="card">
+      <label>Lloji i dokumentit</label>
+      <div class="doctype-buttons">
+        <button type="button" data-type="oferte" class="active">Ofertë</button>
+        <button type="button" data-type="konfirmim">Konfirmim Porosie</button>
+        <button type="button" data-type="proforme">Faturë Proformë</button>
+      </div>
+      <input type="hidden" id="docType" value="oferte">
+    </div>
+
+    <div class="card">
+      <label>ID e Deal-it në HubSpot *</label>
+      <input type="text" id="dealId" required placeholder="p.sh. 509732588730">
+      <div class="hint">E gjen te URL-ja e Deal-it në HubSpot (numri në fund të linkut)</div>
+
+      <div class="row">
+        <div>
+          <label>Emri i klientit *</label>
+          <input type="text" id="emriKlientit" required>
+        </div>
+        <div>
+          <label>Telefoni</label>
+          <input type="text" id="telefoniKlientit">
+        </div>
+      </div>
+
+      <label>Email i klientit</label>
+      <input type="email" id="emailKlientit">
+    </div>
+
+    <div class="card">
+      <label>Produkti / Shërbimi *</label>
+      <input type="text" id="produkti" required placeholder="p.sh. Depozitë karburanti">
+
+      <label>Përshkrim shtesë</label>
+      <textarea id="pershkrimi" placeholder="Detaje, specifikime, etj."></textarea>
+
+      <div class="row">
+        <div>
+          <label>Sasia *</label>
+          <input type="number" id="sasia" value="1" min="1" required>
+        </div>
+        <div>
+          <label>Çmimi për njësi (Lekë) *</label>
+          <input type="number" id="cmimiNjesi" required min="0" step="0.01">
+        </div>
+      </div>
+      <div class="total-box">Totali: <span id="totalDisplay">0</span> Lekë</div>
+
+      <label>Afati i ekzekutimit / dorëzimit</label>
+      <input type="text" id="afatiEkzekutimit" placeholder="p.sh. 10 ditë pune">
+
+      <label>Kushtet e pagesës</label>
+      <input type="text" id="kushtetPageses" value="50% paradhënie, 50% në dorëzim">
+
+      <label>Bashkëngjit foto/dokument (opsionale)</label>
+      <input type="file" id="attachment" accept="image/*,.pdf,.doc,.docx">
+      <div class="hint">Maksimumi ~5 MB. Do të bashkëngjitet te email-i dhe te Deal-i në HubSpot.</div>
+    </div>
+
+    <div class="card proforma-only" id="proformaCard">
+      <label>Banka</label>
+      <input type="text" id="emriBankes" placeholder="p.sh. Raiffeisen Bank">
+      <label>IBAN</label>
+      <input type="text" id="iban" placeholder="AL...">
+    </div>
+
+    <button type="submit" class="submit" id="submitBtn">Dërgo Dokumentin</button>
+    <div class="status" id="statusBox"></div>
+  </form>
+</div>
+
+<script>
+  var WEBHOOK_URL = 'https://hook.eu1.make.com/79iq9kr5dvdiug77xbshua0wnhwtm574';
+
+  var docTypeButtons = document.querySelectorAll('.doctype-buttons button');
+  var docTypeInput = document.getElementById('docType');
+  var proformaCard = document.getElementById('proformaCard');
+
+  docTypeButtons.forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      docTypeButtons.forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      docTypeInput.value = btn.getAttribute('data-type');
+      if (docTypeInput.value === 'proforme') {
+        proformaCard.classList.add('show');
+      } else {
+        proformaCard.classList.remove('show');
+      }
+    });
+  });
+
+  function calcTotal() {
+    var sasia = parseFloat(document.getElementById('sasia').value) || 0;
+    var cmimi = parseFloat(document.getElementById('cmimiNjesi').value) || 0;
+    var total = sasia * cmimi;
+    document.getElementById('totalDisplay').textContent = total.toLocaleString('sq-AL');
+    return total;
+  }
+  document.getElementById('sasia').addEventListener('input', calcTotal);
+  document.getElementById('cmimiNjesi').addEventListener('input', calcTotal);
+
+  function generateDocNumber(prefix) {
+    var now = new Date();
+    var y = now.getFullYear();
+    var m = String(now.getMonth() + 1).padStart(2, '0');
+    var d = String(now.getDate()).padStart(2, '0');
+    var rand = Math.floor(Math.random() * 900 + 100);
+    return prefix + '-' + y + m + d + '-' + rand;
+  }
+
+  function readFileAsBase64(file) {
+    return new Promise(function(resolve, reject) {
+      if (!file) { resolve(null); return; }
+      var reader = new FileReader();
+      reader.onload = function() {
+        // reader.result eshte "data:mime/type;base64,XXXXX" -- ndajme vetem pjesen base64
+        var result = reader.result;
+        var base64 = result.split(',')[1];
+        resolve({ base64: base64, mime: file.type, name: file.name, size: file.size });
+      };
+      reader.onerror = function() { reject(reader.error); };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  document.getElementById('docForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var submitBtn = document.getElementById('submitBtn');
+    var statusBox = document.getElementById('statusBox');
+    var fileInput = document.getElementById('attachment');
+    var file = fileInput.files && fileInput.files[0] ? fileInput.files[0] : null;
+
+    if (file && file.size > 5 * 1024 * 1024) {
+      statusBox.className = 'status err';
+      statusBox.textContent = '✗ Skedari është shumë i madh (max ~5 MB).';
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Duke dërguar...';
+    statusBox.className = 'status';
+
+    var docType = docTypeInput.value;
+    var total = calcTotal();
+    var prefixMap = { oferte: 'OF', konfirmim: 'KP', proforme: 'FP' };
+    var nrDokumenti = generateDocNumber(prefixMap[docType]);
+    var dataFormatuar = new Date().toLocaleDateString('sq-AL');
+
+    readFileAsBase64(file).then(function(fileData) {
+      var payload = {
+        _action: 'generate_document',
+        docType: docType,
+        dealId: document.getElementById('dealId').value,
+        emriKlientit: document.getElementById('emriKlientit').value,
+        telefoniKlientit: document.getElementById('telefoniKlientit').value,
+        emailKlientit: document.getElementById('emailKlientit').value,
+        produkti: document.getElementById('produkti').value,
+        pershkrimi: document.getElementById('pershkrimi').value,
+        sasia: document.getElementById('sasia').value,
+        cmimiNjesi: document.getElementById('cmimiNjesi').value,
+        cmimi: total,
+        afatiEkzekutimit: document.getElementById('afatiEkzekutimit').value,
+        kushtetPageses: document.getElementById('kushtetPageses').value,
+        emriBankes: document.getElementById('emriBankes').value,
+        iban: document.getElementById('iban').value,
+        data: dataFormatuar,
+        nrOfertes: nrDokumenti,
+        nrPorosise: nrDokumenti,
+        nrFaturaProforme: nrDokumenti
+      };
+
+      if (fileData) {
+        payload.attachmentBase64 = fileData.base64;
+        payload.attachmentMime = fileData.mime;
+        payload.attachmentName = fileData.name;
+      }
+
+      return fetch(WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    })
+    .then(function(res) {
+      statusBox.classList.add('ok');
+      statusBox.textContent = '✓ U dërgua me sukses! Dokumenti Nr. ' + nrDokumenti + ' po gjenerohet.';
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Dërgo Dokumentin';
+    })
+    .catch(function(err) {
+      statusBox.classList.add('err');
+      statusBox.textContent = '✗ Gabim gjatë dërgimit: ' + err.message;
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Dërgo Dokumentin';
+    });
+  });
+</script>
+</body>
+</html>
