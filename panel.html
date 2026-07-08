@@ -232,18 +232,7 @@
   }
 
   function readFileAsBase64(file) {
-    return new Promise(function(resolve, reject) {
-      if (!file) { resolve(null); return; }
-      var reader = new FileReader();
-      reader.onload = function() {
-        // reader.result eshte "data:mime/type;base64,XXXXX" -- ndajme vetem pjesen base64
-        var result = reader.result;
-        var base64 = result.split(',')[1];
-        resolve({ base64: base64, mime: file.type, name: file.name, size: file.size });
-      };
-      reader.onerror = function() { reject(reader.error); };
-      reader.readAsDataURL(file);
-    });
+    return new Promise(function(resolve) { resolve(null); });
   }
 
   document.getElementById('docForm').addEventListener('submit', function(e) {
@@ -269,46 +258,41 @@
     var nrDokumenti = generateDocNumber(prefixMap[docType]);
     var dataFormatuar = new Date().toLocaleDateString('sq-AL');
 
-    readFileAsBase64(file).then(function(fileData) {
-      var payload = {
-        _action: 'generate_document',
-        docType: docType,
-        dealId: document.getElementById('dealId').value,
-        emriKlientit: document.getElementById('emriKlientit').value,
-        telefoniKlientit: document.getElementById('telefoniKlientit').value,
-        emailKlientit: document.getElementById('emailKlientit').value,
-        produkti: document.getElementById('produkti').value,
-        pershkrimi: document.getElementById('pershkrimi').value,
-        sasia: document.getElementById('sasia').value,
-        cmimiNjesi: document.getElementById('cmimiNjesi').value,
-        cmimi: total,
-        afatiEkzekutimit: document.getElementById('afatiEkzekutimit').value,
-        kushtetPageses: document.getElementById('kushtetPageses').value,
-        emriBankes: document.getElementById('emriBankes').value,
-        iban: document.getElementById('iban').value,
-        data: dataFormatuar,
-        nrOfertes: nrDokumenti,
-        nrPorosise: nrDokumenti,
-        nrFaturaProforme: nrDokumenti
-      };
+    var fd = new FormData();
+    fd.append('_action', 'generate_document');
+    fd.append('docType', docType);
+    fd.append('dealId', document.getElementById('dealId').value);
+    fd.append('emriKlientit', document.getElementById('emriKlientit').value);
+    fd.append('telefoniKlientit', document.getElementById('telefoniKlientit').value);
+    fd.append('emailKlientit', document.getElementById('emailKlientit').value);
+    fd.append('produkti', document.getElementById('produkti').value);
+    fd.append('pershkrimi', document.getElementById('pershkrimi').value);
+    fd.append('sasia', document.getElementById('sasia').value);
+    fd.append('cmimiNjesi', document.getElementById('cmimiNjesi').value);
+    fd.append('cmimi', total);
+    fd.append('afatiEkzekutimit', document.getElementById('afatiEkzekutimit').value);
+    fd.append('kushtetPageses', document.getElementById('kushtetPageses').value);
+    fd.append('emriBankes', document.getElementById('emriBankes').value);
+    fd.append('iban', document.getElementById('iban').value);
+    fd.append('data', dataFormatuar);
+    fd.append('nrOfertes', nrDokumenti);
+    fd.append('nrPorosise', nrDokumenti);
+    fd.append('nrFaturaProforme', nrDokumenti);
+    if (file) {
+      fd.append('attachment', file, file.name);
+    }
 
-      if (fileData) {
-        payload.attachmentBase64 = fileData.base64;
-        payload.attachmentMime = fileData.mime;
-        payload.attachmentName = fileData.name;
-      }
-
-      return fetch(WEBHOOK_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
+    fetch(WEBHOOK_URL, {
+      method: 'POST',
+      body: fd
     })
     .then(function(res) {
       statusBox.classList.add('ok');
       statusBox.textContent = '✓ U dërgua me sukses! Dokumenti Nr. ' + nrDokumenti + ' po gjenerohet.';
       submitBtn.disabled = false;
       submitBtn.textContent = 'Dërgo Dokumentin';
+      document.getElementById('docForm').reset();
+      calcTotal();
     })
     .catch(function(err) {
       statusBox.classList.add('err');
