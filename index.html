@@ -44,6 +44,11 @@
     .lang-btn.active{border-color:#f4a012;color:#f4a012}
     .nav-cta{background:#f4a012;color:#0a0e14;font-size:12px;font-weight:700;padding:9px 18px;border:none;border-radius:4px;cursor:pointer;text-transform:uppercase;letter-spacing:.5px;transition:opacity .2s}
     .nav-cta:hover{opacity:.9}
+    .nav-toggle{display:none;flex-direction:column;justify-content:center;gap:5px;width:34px;height:34px;background:none;border:none;cursor:pointer;padding:0}
+    .nav-toggle span{display:block;width:100%;height:2px;background:#e8eaf0;transition:transform .25s,opacity .25s}
+    .nav-toggle.open span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+    .nav-toggle.open span:nth-child(2){opacity:0}
+    .nav-toggle.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
 
     /* ── HERO ── */
     .hero{position:relative;min-height:100vh;display:flex;flex-direction:column;overflow:hidden}
@@ -265,7 +270,11 @@
     .modal-cancel:hover{border-color:#a0aab8}
 
     @media(max-width:768px){
-      nav .nav-links{display:none}
+      nav .nav-toggle{display:flex}
+      nav .nav-links{display:none;position:fixed;top:72px;left:0;right:0;flex-direction:column;gap:0;background:#0a0e14;border-bottom:1px solid #263548;padding:.5rem 1.2rem 1rem}
+      nav .nav-links.open{display:flex}
+      nav .nav-links a{padding:14px 0;border-bottom:1px solid #1a2535}
+      nav .lang-btn{display:none}
       nav{padding:0 1.2rem}
       .hero h1{font-size:30px}
       .hero-content{padding:4rem 1.2rem}
@@ -451,6 +460,9 @@
     <button class="lang-btn active">AL</button>
     <button class="lang-btn">EN</button>
     <button class="nav-cta" onclick="openModal('general')">Kërko Preventiv</button>
+    <button class="nav-toggle" id="navToggle" aria-label="Menu" onclick="toggleNavMenu()">
+      <span></span><span></span><span></span>
+    </button>
   </div>
 </nav>
 
@@ -705,7 +717,7 @@
           Carports &amp; Suportet Fotovoltaike
           <i class="ti ti-chevron-down svc-arrow" id="carport-arrow"></i>
         </div>
-        <div class="svc-desc">Projektim dhe prodhim strukturash çeliku për panele diellore. Klikoni për të parë modelet.</div>
+        <div class="svc-desc">Struktura çeliku S355 galvanizuar për panele fotovoltaike — nga carport për 1 makinë deri te sisteme mbi parkingje të mëdha. Projektim, prodhim dhe montim i plotë. Klikoni për të parë modelet.</div>
         <span class="svc-btn" style="pointer-events:none">Shiko Modelet ↓</span>
       </div>
     </div>
@@ -721,7 +733,7 @@
           Kapanone &amp; Ndërtesa Metalike
           <i class="ti ti-chevron-down svc-arrow" id="building-arrow"></i>
         </div>
-        <div class="svc-desc">Vila 2-kateshe dhe kapanone industriale me konstruksion çeliku. Klikoni për të parë modelet.</div>
+        <div class="svc-desc">Ndërtesa industriale dhe rezidenciale me skelet çeliku — magazina, kapanone prodhimi, vila moderne 2-kateshe dhe shtëpi modulare. Nga vizatimi teknik e llogaritë statike (ETABS) deri te dorëzimi final. Klikoni për të parë modelet.</div>
         <span class="svc-btn" style="pointer-events:none">Shiko Modelet ↓</span>
       </div>
     </div>
@@ -733,7 +745,7 @@
       </div>
       <div class="svc-body">
         <div class="svc-title">Aksesorë Saldimi &amp; Prerje Plazme</div>
-        <div class="svc-desc">Pistoletë MKOW MIG/MAG dhe TIG, tela saldimi të certifikuara, dhe aksesorë Hypertherm.</div>
+        <div class="svc-desc">Pistoletë saldimi MIG/MAG dhe TIG nga MKOW, tela saldimi të certifikuara (G3Si1/E70C-6M), pjesë konsumi origjinale dhe aksesorë prerje plazme Hypertherm (XPR300, HPRXD, MAXPRO200). Stok dhe porosi sipas kërkesës.</div>
         <button class="svc-btn" onclick="event.stopPropagation();document.getElementById('products').scrollIntoView({behavior:'smooth'})">Shiko Produktet</button>
       </div>
     </div>
@@ -745,7 +757,7 @@
       </div>
       <div class="svc-body">
         <div class="svc-title">Konsulencë &amp; Ndërmjetësim</div>
-        <div class="svc-desc">Akses direkt tek Aluminio di Qualità (IT) dhe Arnikon (TR). Konsulencë teknike dhe tregtare me komisione.</div>
+        <div class="svc-desc">Ju lidhim direkt me furnitorë europianë të certifikuar CE — lëndë e parë alumini nga Aluminio di Qualità (Itali) dhe sisteme vinçash nga Arnikon Engineering (Turqi). Konsulencë teknike, negocim çmimi dhe ndërmjetësim i plotë i porosisë.</div>
         <button class="svc-btn" onclick="event.stopPropagation();openModal('general')">Na Kontakto</button>
       </div>
     </div>
@@ -1658,6 +1670,18 @@
 
   document.addEventListener('DOMContentLoaded', initCrs);
 
+
+  // Mobile nav toggle
+  function toggleNavMenu() {
+    document.getElementById('navToggle').classList.toggle('open');
+    document.querySelector('nav .nav-links').classList.toggle('open');
+  }
+  document.querySelectorAll('nav .nav-links a').forEach(function(link) {
+    link.addEventListener('click', function() {
+      document.getElementById('navToggle').classList.remove('open');
+      document.querySelector('nav .nav-links').classList.remove('open');
+    });
+  });
 
   // NAV scroll effect
   window.addEventListener('scroll', function() {
