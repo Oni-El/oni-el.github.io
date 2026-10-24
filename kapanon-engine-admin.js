@@ -963,16 +963,16 @@
 
 
   /* Çmimet e brendshme – vlera fillestare (EUR). Përdoruesi i zëvendëson me të tijat. */
-  const DEFAULT_PRICES = {
-    stMat: 0.95, stFab: 0.45, stPaint: 0.15, stZink: 0.45, stMont: 0.30, stairExtra: 0.60,
-    roofPanel: { 30: 16, 40: 18, 50: 20, 60: 22, 80: 26, 100: 30, 120: 34, 150: 40 },
-    wallPanel: { 30: 15.5, 40: 17, 50: 19, 60: 21, 80: 25, 100: 29, 120: 33, 150: 39 },
-    mwFactor: 1.6, sheetRoof: 8.5, sheetWall: 8.0, roofMont: 4.5, wallMont: 4.0, waste: 3, sky: 12,
-    gutter: 18, down: 12, flash: 9,
-    doorSek: 110, doorRoll: 75, motor: 450, pDoor: 320, win: 120,
-    deck: 13, concrete: 85, mesh: 1.3, slabWork: 6, grating: 55, rail: 45,
-    truck: 350, truckKg: 20000, crane: 0, tPerDay: 4,
-    designPct: 2, designMin: 300, contPct: 3, margin: 15, round: 100, vat: 20, eurAll: 98
+  const DEFAULT_PRICES /* plotësohen nga Supabase */ = {
+    stMat: 0, stFab: 0, stPaint: 0, stZink: 0, stMont: 0, stairExtra: 0,
+    roofPanel: { 30: 0, 40: 0, 50: 0, 60: 0, 80: 0, 100: 0, 120: 0, 150: 0 },
+    wallPanel: { 30: 0, 40: 0, 50: 0, 60: 0, 80: 0, 100: 0, 120: 0, 150: 0 },
+    mwFactor: 1, sheetRoof: 0, sheetWall: 0, roofMont: 0, wallMont: 0, waste: 3, sky: 0,
+    gutter: 0, down: 0, flash: 0,
+    doorSek: 0, doorRoll: 0, motor: 0, pDoor: 0, win: 0,
+    deck: 0, concrete: 0, mesh: 0, slabWork: 0, grating: 0, rail: 0,
+    truck: 0, truckKg: 20000, crane: 0, tPerDay: 4,
+    designPct: 0, designMin: 0, contPct: 0, margin: 0, round: 100, vat: 20, eurAll: 98
   };
 
   /* ---------------- Kostot ---------------- */

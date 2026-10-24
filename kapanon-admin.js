@@ -7,7 +7,7 @@
   const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const LSget = k => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } };
   const LSset = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } };
-  let sb = null, app = null, current = null, list = [];
+  let sb = null, app = null, current = null, list = [], factory = null;
   const CITY = { 'Elbasan': [0.8, 24, 'III', 0.25], 'Tiranë': [0.8, 25, 'III', 0.25], 'Durrës': [0.6, 27, 'II', 0.30], 'Shkodër': [1.0, 26, 'III', 0.28], 'Vlorë': [0.6, 28, 'II', 0.30], 'Fier': [0.6, 26, 'II', 0.27], 'Lushnjë': [0.6, 25, 'II', 0.25], 'Kavajë': [0.6, 26, 'II', 0.28], 'Lezhë': [0.8, 26, 'III', 0.28], 'Krujë / Fushë-Krujë': [0.8, 25, 'III', 0.27], 'Berat': [0.8, 24, 'III', 0.22], 'Korçë': [2.0, 25, 'III', 0.25], 'Pogradec': [1.8, 25, 'III', 0.27], 'Gjirokastër': [1.2, 25, 'III', 0.22], 'Sarandë': [0.6, 27, 'II', 0.30], 'Përmet': [1.2, 24, 'III', 0.24], 'Kukës': [2.0, 24, 'III', 0.18], 'Peshkopi': [2.0, 24, 'III', 0.22], 'Kosovë / tjetër': [1.2, 25, 'III', 0.25] };
   const G2 = { A: 1.0, B: 1.0, D: 0.5, I: 0.3, E: 0.3, X: 0.5 };
   const STATUS = { e_re: ['E re', 'new'], ndryshuar: ['Ndryshuar nga klienti', 'new'], oferte_gati: ['Ofertë e dërguar', 'sent'], konfirmuar: ['Konfirmuar', 'ok'], anulluar: ['Anulluar', 'off'] };
@@ -28,11 +28,20 @@
       const c = client(); if (!c) return LSget('kap.settings');
       const { data, error } = await c.from('price_settings').select('data').eq('id', 1).maybeSingle();
       if (error) { console.warn(error); return LSget('kap.settings'); }
-      return data ? data.data : null;
+      const d = data ? data.data : null;
+      // vlerat fillestare ruhen vetëm në Supabase (skedari publik ka zero)
+      if (d && d.factory) {
+        factory = d.factory;
+        const D = window.KapEngine.DEFAULT_PRICES;
+        Object.keys(factory).forEach(k => { if (D[k] && typeof D[k] === 'object') Object.assign(D[k], factory[k]); else D[k] = factory[k]; });
+        if (!d.prices) d.prices = JSON.parse(JSON.stringify(factory));
+      }
+      return d;
     },
     async setSettings(v) {
       const c = client(); if (!c) { LSset('kap.settings', v); return; }
-      const { error } = await c.from('price_settings').upsert({ id: 1, data: v, updated_at: new Date().toISOString() });
+      const payload = factory ? Object.assign({}, v, { factory }) : v;
+      const { error } = await c.from('price_settings').upsert({ id: 1, data: payload, updated_at: new Date().toISOString() });
       if (error) throw error;
     },
     async list() { return LSget('kap.projects') || []; },
