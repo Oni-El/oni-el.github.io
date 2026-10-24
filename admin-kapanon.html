@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="sq">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Paneli · Kalkulatori i Kapanonëve</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<style>
+/* Tavolina e projektimit: kolona e specifikimeve majtas, modeli i madh djathtas, shirit grafit me vijë sigurie sipër */
+:root {
+  --bg: #e6eaed; --panel: #f7f9fa; --panel-2: #eef2f4; --ink: #18212a; --muted: #586672; --line: #c6cfd6; --line-2: #dde3e7;
+  --accent: #e8a317; --accent-ink: #18212a; --draw-acc: #b8740b; --steel: #33597a; --steel-soft: #dfe8ef;
+  --ok: #2e7a4c; --warn: #b35a0a; --bad: #b42318; --ok-bg: #e2f0e7; --warn-bg: #fbeedd; --bad-bg: #f9e3e0;
+  --view-bg: #dde4e9; --view-ground: #cfd7dd; --view-grid: #b3bec7; --view-slab: #c5c9cc;
+  --head: #161e26; --head-2: #222c35; --head-ink: #edf1f4; --head-muted: #98a6b2;
+  --f-ui: 'Barlow', 'Segoe UI', system-ui, sans-serif;
+  --f-cond: 'Barlow Condensed', 'Arial Narrow', 'Segoe UI', sans-serif;
+  --f-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  --r: 6px; --head-h: 112px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0e1317; --panel: #151c22; --panel-2: #1b242b; --ink: #e1e7ec; --muted: #93a2ae; --line: #2c3842; --line-2: #222c34;
+  --accent: #f0b429; --accent-ink: #141a20; --draw-acc: #f0b429; --steel: #86afd0; --steel-soft: #1f2d39;
+  --ok: #4fb57c; --warn: #f0913f; --bad: #f2695c; --ok-bg: #16291e; --warn-bg: #2d2114; --bad-bg: #321a18;
+  --view-bg: #10161b; --view-ground: #172028; --view-grid: #26333d; --view-slab: #3a4550;
+  --head: #090d10; --head-2: #141b21; --head-ink: #e8edf0; --head-muted: #8696a3; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0e1317; --panel: #151c22; --panel-2: #1b242b; --ink: #e1e7ec; --muted: #93a2ae; --line: #2c3842; --line-2: #222c34;
+  --accent: #f0b429; --accent-ink: #141a20; --draw-acc: #f0b429; --steel: #86afd0; --steel-soft: #1f2d39;
+  --ok: #4fb57c; --warn: #f0913f; --bad: #f2695c; --ok-bg: #16291e; --warn-bg: #2d2114; --bad-bg: #321a18;
+  --view-bg: #10161b; --view-ground: #172028; --view-grid: #26333d; --view-slab: #3a4550;
+  --head: #090d10; --head-2: #141b21; --head-ink: #e8edf0; --head-muted: #8696a3; color-scheme: dark }
+* { box-sizing: border-box }
+html, body { height: 100% }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-ui); font-size: 14px; line-height: 1.4; -webkit-font-smoothing: antialiased }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 50; background: var(--head) }
+button, input, select, textarea { font: inherit; color: inherit }
+.mono, .num { font-family: var(--f-mono); font-variant-numeric: tabular-nums }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+
+/* ---------- shiriti i sipërm ---------- */
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 40; background: var(--head); color: var(--head-ink) }
+.top-in { display: flex; align-items: center; gap: 14px 18px; padding-block: 10px 8px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); flex-wrap: wrap }
+.kbar { background: var(--head-2); padding-block: 7px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
+.stripe { height: 5px; background: repeating-linear-gradient(-45deg, var(--accent) 0 10px, var(--head) 10px 20px) }
+.brand { display: flex; flex-direction: column; line-height: 1.05; min-width: 0 }
+.brand .mark { font-family: var(--f-cond); font-weight: 700; letter-spacing: .14em; font-size: 12px; color: var(--accent) }
+.brand .bt { font-family: var(--f-cond); font-weight: 600; font-size: 19px; letter-spacing: .01em; white-space: nowrap }
+.proj-name { background: var(--head-2); border: 1px solid transparent; border-radius: var(--r); padding: 7px 10px; color: var(--head-ink); width: 260px; min-width: 0; font-weight: 500 }
+.proj-name:hover { border-color: #3a4651 }
+.kpis { display: flex; gap: 8px 26px; align-items: center; min-width: 0; flex-wrap: wrap }
+.kpi { display: flex; align-items: baseline; gap: 8px; min-width: 0 }
+.kpi .kl { font-family: var(--f-cond); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--head-muted); white-space: nowrap }
+.kpi .kv { font-family: var(--f-mono); font-variant-numeric: tabular-nums; font-size: 14px; font-weight: 600; white-space: nowrap; color: var(--head-ink) }
+.kpi.big .kv { font-size: 17px; color: var(--accent) }
+.kpi.int .kv { color: #b9c7d2 }
+.status { display: inline-flex; align-items: center; gap: 6px; font-family: var(--f-cond); font-size: 13px; letter-spacing: .03em; padding: 3px 10px; border-radius: 99px; background: var(--head); white-space: nowrap; margin-left: auto }
+.status i { width: 8px; height: 8px; border-radius: 50%; background: var(--head-muted) }
+.status.ok i { background: #4fb57c } .status.bad i { background: #f2695c } .status.busy i { background: var(--accent) }
+.acts { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-left: auto }
+.hbtn { background: var(--head-2); border: 1px solid #33404b; color: var(--head-ink); border-radius: var(--r); padding: 7px 12px; cursor: pointer; font-weight: 500; white-space: nowrap }
+.hbtn:hover { border-color: #5a6977 }
+.hbtn.pri { background: var(--accent); color: #141a20; border-color: var(--accent); font-weight: 600 }
+.cm { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; color: var(--head-muted); user-select: none; white-space: nowrap }
+.cm input { appearance: none; width: 34px; height: 20px; border-radius: 99px; background: #33404b; position: relative; cursor: pointer; margin: 0; transition: background .15s }
+.cm input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: #dfe6eb; transition: transform .15s }
+.cm input:checked { background: var(--accent) } .cm input:checked::after { transform: translateX(14px) }
+.cm input:checked + span { color: var(--head-ink) }
+
+/* ---------- struktura ---------- */
+.app { display: grid; grid-template-columns: 352px minmax(0, 1fr); min-height: calc(100% - var(--head-h)) }
+.side { background: var(--panel); border-right: 1px solid var(--line); overflow-y: auto; position: sticky; top: calc(env(safe-area-inset-top, 0px) + var(--head-h)); height: calc(100dvh - var(--head-h) - env(safe-area-inset-top, 0px)); padding-bottom: 40px }
+.main { min-width: 0; display: flex; flex-direction: column; padding-block: 12px 24px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); gap: 12px }
+@media (max-width: 920px) {
+  .top { position: static }
+  .app { grid-template-columns: minmax(0, 1fr) }
+  .side { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--line); order: 2 }
+  .main { order: 1 }
+  .proj-name { width: 100%; order: 3 }
+  .acts { margin-left: 0; order: 4 }
+  .kpis { gap: 6px 16px }
+  .kpi { flex-direction: column; gap: 0 }
+  .status { margin-left: 0 }
+}
+
+/* ---------- formulari ---------- */
+.sec { border-bottom: 1px solid var(--line-2) }
+.sec > summary { list-style: none; cursor: pointer; display: flex; align-items: baseline; gap: 10px; padding: 12px 16px 11px; padding-left: max(16px, env(safe-area-inset-left, 0px)) }
+.sec > summary::-webkit-details-marker { display: none }
+.sec > summary::before { content: ""; width: 7px; height: 7px; border-right: 1.6px solid var(--muted); border-bottom: 1.6px solid var(--muted); transform: rotate(-45deg); transition: transform .15s; flex: none; position: relative; top: -1px }
+.sec[open] > summary::before { transform: rotate(45deg) }
+.sec .st { font-family: var(--f-cond); font-weight: 600; font-size: 15px; letter-spacing: .06em; text-transform: uppercase }
+.sec .ss { margin-left: auto; color: var(--muted); font-family: var(--f-mono); font-size: 11.5px; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0 }
+.sec > summary:hover .st { color: var(--steel) }
+.fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 10px; padding: 2px 16px 16px; padding-left: max(16px, env(safe-area-inset-left, 0px)) }
+.f { display: flex; flex-direction: column; gap: 4px; min-width: 0 }
+.f.w2 { grid-column: span 2 }
+.f > label, .f > .fl { font-size: 12.5px; color: var(--muted); font-weight: 500 }
+.f .hint { font-size: 11.5px; color: var(--muted); font-family: var(--f-mono); min-height: 0 }
+.f .hint:empty { display: none }
+.inp { display: flex; align-items: center; background: var(--bg); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden }
+.inp:focus-within { border-color: var(--steel); box-shadow: 0 0 0 2px var(--steel-soft) }
+.inp input, .inp select { flex: 1; min-width: 0; border: 0; background: transparent; padding: 7px 8px; outline: none }
+.inp input[type=number] { font-family: var(--f-mono); font-variant-numeric: tabular-nums; text-align: right; -moz-appearance: textfield }
+.inp input::-webkit-outer-spin-button, .inp input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0 }
+.inp .u { padding: 0 8px 0 2px; color: var(--muted); font-size: 12px; white-space: nowrap }
+.inp select { cursor: pointer; padding-right: 4px }
+textarea.ta { width: 100%; background: var(--bg); border: 1px solid var(--line); border-radius: var(--r); padding: 7px 8px; resize: vertical; min-height: 70px; font-size: 13px }
+.seg { display: flex; background: var(--bg); border: 1px solid var(--line); border-radius: var(--r); padding: 2px; gap: 2px }
+.seg button { flex: 1 1 0; border: 0; background: transparent; border-radius: 4px; padding: 6px 4px; cursor: pointer; font-size: 13px; color: var(--muted); white-space: nowrap; min-width: 0; overflow: hidden; text-overflow: ellipsis }
+.seg button[aria-pressed="true"] { background: var(--panel); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.12), inset 0 -2px 0 var(--accent); font-weight: 600 }
+.tog { display: flex; align-items: center; gap: 9px; cursor: pointer; font-size: 13px; padding: 4px 0 }
+.tog input { appearance: none; width: 32px; height: 18px; border-radius: 99px; background: var(--line); position: relative; flex: none; margin: 0; cursor: pointer }
+.tog input::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: var(--panel); transition: transform .15s }
+.tog input:checked { background: var(--steel) } .tog input:checked::after { transform: translateX(14px) }
+.sub-note { grid-column: span 2; font-size: 12px; color: var(--muted); background: var(--panel-2); border-radius: var(--r); padding: 8px 10px; line-height: 1.45 }
+.sub-note b { color: var(--ink); font-family: var(--f-mono); font-weight: 500 }
+
+/* ---------- skedat ---------- */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none }
+.tabs button { border: 0; background: transparent; padding: 9px 14px 10px; cursor: pointer; font-family: var(--f-cond); font-weight: 600; font-size: 15px; letter-spacing: .04em; color: var(--muted); border-bottom: 3px solid transparent; margin-bottom: -1px; white-space: nowrap }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent) }
+.tabs button:hover { color: var(--ink) }
+.tab { display: none; min-width: 0 } .tab.on { display: block }
+.warnbar { background: var(--bad-bg); color: var(--ink); border: 1px solid var(--bad); border-radius: 8px; padding: 9px 12px 9px 14px; font-size: 13px; display: grid; gap: 4px }
+.warnbar b { color: var(--bad); font-family: var(--f-cond); letter-spacing: .05em; text-transform: uppercase; font-size: 12.5px }
+
+/* ---------- modeli 3D ---------- */
+.viewer { position: relative; height: calc(100dvh - var(--head-h) - 92px); min-height: 440px; border-radius: 8px; overflow: hidden; background: var(--view-bg); border: 1px solid var(--line) }
+.viewer canvas { display: block; width: 100%; height: 100%; touch-action: none }
+.v-tools { position: absolute; top: 10px; left: 10px; right: 10px; display: flex; gap: 8px; flex-wrap: wrap; pointer-events: none; z-index: 2 }
+.v-tools > * { pointer-events: auto }
+.vgroup { display: flex; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 2px; gap: 2px; box-shadow: 0 2px 8px rgba(0,0,0,.08) }
+.vgroup button { border: 0; background: transparent; padding: 5px 9px; border-radius: 4px; cursor: pointer; font-size: 12.5px; color: var(--muted); white-space: nowrap }
+.vgroup button[aria-pressed="true"] { background: var(--ink); color: var(--panel) }
+.v-legend { position: absolute; left: 10px; bottom: 10px; display: flex; gap: 12px; flex-wrap: wrap; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 6px 10px; font-size: 12px; color: var(--muted); max-width: calc(100% - 20px); z-index: 2 }
+.v-legend span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap }
+.v-legend i { width: 10px; height: 10px; border-radius: 2px; display: inline-block }
+.v-dims { position: absolute; right: 10px; bottom: 10px; font-family: var(--f-mono); font-size: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 6px 10px; z-index: 2 }
+.v3d-err { padding: 40px; color: var(--muted) }
+@media (max-width: 640px) { .v-dims { display: none } .viewer { height: 62vh; min-height: 380px } }
+
+/* ---------- kartat e raportit ---------- */
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 12px; align-items: start }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; min-width: 0 }
+.card h3 { margin: 0 0 10px; font-family: var(--f-cond); font-weight: 600; font-size: 16px; letter-spacing: .05em; text-transform: uppercase; display: flex; align-items: center; gap: 10px }
+.card h3 .pill { margin-left: auto }
+.card.wide { grid-column: 1 / -1 }
+.kv { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 14px; font-size: 13.5px }
+.kv dt { color: var(--muted) } .kv dd { margin: 0; text-align: right; font-family: var(--f-mono); font-variant-numeric: tabular-nums; font-size: 13px }
+.pill { display: inline-flex; align-items: center; gap: 5px; font-family: var(--f-cond); font-size: 12.5px; letter-spacing: .04em; padding: 2px 9px; border-radius: 99px; font-weight: 600; text-transform: none }
+.pill.ok { background: var(--ok-bg); color: var(--ok) } .pill.bad { background: var(--bad-bg); color: var(--bad) } .pill.warn { background: var(--warn-bg); color: var(--warn) }
+.urow { display: grid; grid-template-columns: 150px minmax(0, 1fr) 64px; gap: 4px 12px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line-2) }
+.urow:first-of-type { border-top: 0 }
+.urow .n { font-weight: 600 } .urow .n small { display: block; font-weight: 400; color: var(--muted); font-size: 12px }
+.urow .g { font-size: 12px; color: var(--muted); grid-column: 2 / 4 }
+.ubar { height: 8px; background: var(--panel-2); border-radius: 99px; overflow: hidden; position: relative }
+.ubar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 99px; background: var(--ok) }
+.ubar.w i { background: var(--warn) } .ubar.b i { background: var(--bad) }
+.uval { font-family: var(--f-mono); font-size: 13px; text-align: right; white-space: nowrap }
+.tblw { overflow-x: auto }
+table.t { width: 100%; border-collapse: collapse; font-size: 13px }
+table.t th { text-align: left; font-family: var(--f-cond); font-weight: 600; letter-spacing: .05em; text-transform: uppercase; font-size: 12px; color: var(--muted); padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap }
+table.t td { padding: 6px 8px; border-bottom: 1px solid var(--line-2); vertical-align: top }
+table.t td.r, table.t th.r { text-align: right }
+table.t td.num { font-family: var(--f-mono); font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right }
+table.t tr.grp td { background: var(--panel-2); font-weight: 600; font-family: var(--f-cond); letter-spacing: .04em; text-transform: uppercase; font-size: 12.5px }
+table.t tr.tot td { font-weight: 600; border-top: 1.5px solid var(--ink) }
+table.t tr.fin td { background: var(--ink); color: var(--panel); font-weight: 700; font-size: 14.5px }
+ul.as { margin: 0; padding-left: 18px; color: var(--muted); font-size: 13px; line-height: 1.55 } ul.as li { margin: 2px 0 }
+.drw { display: grid; gap: 12px }
+.drw .card { padding: 8px }
+.drw svg { border-radius: 4px }
+.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center }
+.btn { border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: var(--r); padding: 8px 14px; cursor: pointer; font-weight: 500; white-space: nowrap }
+.btn:hover { border-color: var(--steel) }
+.btn.pri { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600 }
+.btn.sm { padding: 5px 10px; font-size: 12.5px }
+.btn.danger { color: var(--bad) }
+.mini { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 12px }
+.mini .m { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px }
+.mini .m .l { font-family: var(--f-cond); font-size: 11.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--muted) }
+.mini .m .v { font-family: var(--f-mono); font-weight: 600; font-size: 17px; margin-top: 2px }
+.mini .m.hl { border-color: var(--accent); box-shadow: inset 4px 0 0 var(--accent) }
+.lockline { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--muted); margin: 0 0 10px }
+.lockline svg { flex: none }
+
+/* ---------- oferta ---------- */
+.offer-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 280px; gap: 14px; align-items: start }
+@media (max-width: 1100px) { .offer-wrap { grid-template-columns: minmax(0, 1fr) } .side-acts { position: static } }
+@media (max-width: 560px) { .sheet .figs { grid-template-columns: 1fr 1fr } .sheet .who { grid-template-columns: 1fr } .sheet .sh-body, .sheet .sh-band { padding-left: 14px; padding-right: 14px } }
+.sheet { background: #fff; color: #18212a; border-radius: 6px; box-shadow: 0 6px 24px rgba(15,25,35,.14); overflow: hidden; max-width: 820px; border: 1px solid var(--line) }
+.sheet .sh-band { background: #161e26; color: #eef2f4; padding: 18px 26px 14px; display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; border-bottom: 4px solid #e8a317 }
+.sheet .sh-band b { font-family: var(--f-cond); font-size: 24px; letter-spacing: .03em; display: block }
+.sheet .sh-band small { color: #a7b3bd; font-size: 12px }
+.sheet .sh-band .r { text-align: right; font-size: 12.5px; color: #c7d1d8 }
+.sheet .sh-band .r b { font-size: 15px; letter-spacing: .06em }
+.sheet .sh-body { padding: 18px 26px 26px; display: grid; gap: 16px }
+.sheet .who { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; font-size: 13.5px }
+.sheet .who .l { font-family: var(--f-cond); font-size: 11.5px; letter-spacing: .08em; color: #5d6b77; text-transform: uppercase }
+.sheet .who b { font-size: 15px; display: block }
+.sheet img.shot { width: 100%; border-radius: 4px; border: 1px solid #d5dce1; display: block; background: #e9eef1; aspect-ratio: 16 / 9; object-fit: cover }
+.sheet .figs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px }
+.sheet .figs > div { background: #eef2f4; padding: 9px 11px; border-radius: 3px; min-width: 0 }
+.sheet .figs > div:last-child { background: #161e26; color: #fff }
+.sheet .figs .l { font-family: var(--f-cond); font-size: 11px; letter-spacing: .07em; text-transform: uppercase; color: #5d6b77 }
+.sheet .figs > div:last-child .l { color: #b6c2cb }
+.sheet .figs .v { font-family: var(--f-mono); font-weight: 600; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.sheet h4 { margin: 4px 0 2px; font-family: var(--f-cond); font-size: 14px; letter-spacing: .08em; text-transform: uppercase; border-bottom: 2px solid #e8a317; display: inline-block; padding-bottom: 1px }
+.sheet table { width: 100%; border-collapse: collapse; font-size: 12.8px }
+.sheet table td { padding: 5px 6px; border-bottom: 1px solid #e3e8ec; vertical-align: top }
+.sheet table td:first-child { font-weight: 600; width: 150px }
+.sheet table.pr td:first-child { font-weight: 400; width: auto }
+.sheet table.pr td:last-child { text-align: right; font-family: var(--f-mono); white-space: nowrap }
+.sheet table.pr tr.tsub td { font-weight: 700 }
+.sheet table.pr tr.tfin td { background: #161e26; color: #fff; font-weight: 700 }
+.sheet .drs { display: grid; gap: 8px }
+.sheet .note { font-size: 11.5px; color: #5d6b77; font-style: italic }
+.side-acts { display: grid; gap: 10px; position: sticky; top: calc(env(safe-area-inset-top, 0px) + var(--head-h) + 20px) }
+.side-acts .card p { margin: 0 0 10px; font-size: 13px; color: var(--muted) }
+.side-acts .btn { width: 100% }
+
+/* ---------- dialogët ---------- */
+dialog { border: 1px solid var(--line); border-radius: 10px; background: var(--panel); color: var(--ink); padding: 0; width: min(860px, calc(100vw - 32px)); max-height: calc(100dvh - 48px) }
+dialog::backdrop { background: rgba(10, 14, 18, .55) }
+.dlg-h { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--panel); z-index: 1 }
+.dlg-h h2 { margin: 0; font-family: var(--f-cond); font-size: 20px; letter-spacing: .04em; font-weight: 600 }
+.dlg-h .sp { flex: 1 }
+.dlg-b { padding: 16px 18px; display: grid; gap: 18px }
+.pgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px 14px }
+.pgroup h4 { margin: 0 0 8px; font-family: var(--f-cond); font-size: 14px; letter-spacing: .07em; text-transform: uppercase; color: var(--steel) }
+.plist { display: grid; gap: 6px }
+.prow { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 10px 12px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--bg) }
+.prow b { display: block; font-weight: 600 } .prow small { color: var(--muted); font-size: 12px }
+.prow .pv { font-family: var(--f-mono); font-size: 13px; text-align: right }
+.empty { color: var(--muted); padding: 18px; text-align: center; border: 1px dashed var(--line); border-radius: 8px }
+.toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%) translateY(20px); background: var(--ink); color: var(--panel); padding: 10px 16px; border-radius: 8px; font-size: 13.5px; opacity: 0; transition: opacity .2s, transform .2s; pointer-events: none; z-index: 100; max-width: calc(100vw - 32px) }
+.toast.on { opacity: 1; transform: translateX(-50%) translateY(0) }
+.client-mode .int, .client-mode .internal, .restricted .int, .restricted .internal { display: none !important }
+.restricted .money { display: none !important }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important } }
+</style>
+
+</head>
+<body>
+<header class="top" id="top">
+  <div class="top-in">
+    <div class="brand"><span class="mark" id="brandMark">ONI-EL</span><span class="bt">Kalkulatori i kapanonëve</span></div>
+    <input id="projName" class="proj-name" aria-label="Emri i projektit" autocomplete="off">
+    <div class="acts">
+      <button class="hbtn" id="bReq" type="button" hidden>Kërkesat</button>
+      <button class="hbtn internal" id="bNew" type="button">Projekt i ri</button>
+      <button class="hbtn internal" id="bProjects" type="button">Projektet</button>
+      <button class="hbtn internal" id="bPrices" type="button">Çmimet e mia</button>
+      <button class="hbtn pri internal" id="bSave" type="button">Ruaj</button>
+      <button class="hbtn" id="bLogout" type="button" hidden>Dil</button>
+      <label class="cm" id="cmWrap"><input type="checkbox" id="clientMode"><span>Pamja e klientit</span></label>
+    </div>
+  </div>
+  <div class="kbar">
+    <div class="kpis">
+      <div class="kpi big money"><span class="kl">Çmimi pa TVSH</span><span class="kv" id="kPrice">–</span></div>
+      <div class="kpi money"><span class="kl">Për m²</span><span class="kv" id="kM2">–</span></div>
+      <div class="kpi"><span class="kl">Sipërfaqja</span><span class="kv" id="kArea">–</span></div>
+      <div class="kpi int"><span class="kl">Çeliku</span><span class="kv" id="kSteel">–</span></div>
+      <div class="kpi int"><span class="kl">Fitimi</span><span class="kv" id="kProfit">–</span></div>
+      <span class="status" id="kStatus"><i></i><span>Duke llogaritur…</span></span>
+    </div>
+  </div>
+  <div class="stripe"></div>
+</header>
+
+<div class="app">
+  <aside class="side" id="side" aria-label="Të dhënat e kapanonit"></aside>
+  <main class="main">
+    <nav class="tabs" role="tablist" aria-label="Pamjet">
+      <button role="tab" id="tb-m3d" aria-selected="true" data-tab="m3d">Modeli 3D</button>
+      <button role="tab" id="tb-draw" aria-selected="false" data-tab="draw">Vizatimet</button>
+      <button role="tab" id="tb-calc" aria-selected="false" data-tab="calc">Llogaritja strukturore</button>
+      <button role="tab" id="tb-cost" aria-selected="false" data-tab="cost" class="internal">Kostot e brendshme</button>
+      <button role="tab" id="tb-offer" aria-selected="false" data-tab="offer" class="money">Oferta</button>
+    </nav>
+    <div class="reqbar" id="reqBar" hidden></div>
+    <div class="warnbar" id="warnBar" hidden></div>
+    <section class="tab on" id="t-m3d" role="tabpanel" aria-labelledby="tb-m3d">
+      <div class="viewer" id="viewer">
+        <div class="v-tools">
+          <div class="vgroup" id="vgView" role="group" aria-label="Pamja">
+            <button type="button" data-v="iso" aria-pressed="true">3D</button><button type="button" data-v="front">Ballore</button><button type="button" data-v="side">Anësore</button><button type="button" data-v="top">Nga lart</button>
+          </div>
+          <div class="vgroup" id="vgClad" role="group" aria-label="Mbulesa">
+            <button type="button" data-c="0" aria-pressed="false">Struktura</button><button type="button" data-c="1" aria-pressed="true">Transparente</button><button type="button" data-c="2" aria-pressed="false">E mbyllur</button>
+          </div>
+          <div class="vgroup" id="vgVis" role="group" aria-label="Elementet">
+            <button type="button" data-t="purl" aria-pressed="true">Riglat</button><button type="button" data-t="mezz" aria-pressed="true">Mezanina</button><button type="button" data-t="axes" aria-pressed="true">Akset</button>
+          </div>
+        </div>
+        <div class="v-legend" aria-hidden="true">
+          <span><i style="background:#3f6383"></i>Portalet</span><span><i style="background:#a3adb5"></i>Riglat</span><span><i style="background:#d08f14"></i>Kontraventimet</span><span id="lgM"><i style="background:#2f7470"></i>Mezanina</span><span id="lgS"><i style="background:#4c5963"></i>Shkallët</span>
+        </div>
+        <div class="v-dims" id="vDims"></div>
+      </div>
+    </section>
+    <section class="tab" id="t-draw" role="tabpanel" aria-labelledby="tb-draw"><div class="drw" id="drawings"></div></section>
+    <section class="tab" id="t-calc" role="tabpanel" aria-labelledby="tb-calc"><div id="report"></div></section>
+    <section class="tab internal" id="t-cost" role="tabpanel" aria-labelledby="tb-cost"><div id="costs"></div></section>
+    <section class="tab" id="t-offer" role="tabpanel" aria-labelledby="tb-offer">
+      <div class="offer-wrap">
+        <div id="offerPrev"></div>
+        <div class="side-acts">
+          <div class="card">
+            <h3>Dërgo klientit</h3>
+            <p>PDF-ja merr pamjen aktuale të modelit 3D, vizatimet dhe çmimin për m². Çmimi për kg dhe kostot e brendshme nuk përfshihen kurrë.</p>
+            <div style="display:grid;gap:8px">
+              <button class="btn pri" id="bPdf" type="button">Shkarko ofertën (PDF)</button>
+              <button class="btn" id="bWa" type="button">Kopjo përmbledhjen për WhatsApp</button>
+              <button class="btn" id="bPng" type="button">Ruaj imazhin 3D (JPG)</button>
+            </div>
+          </div>
+          <div class="card int"><h3>Kontroll i shpejtë</h3><div id="offerCheck" class="kv"></div></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<dialog id="dlgPrices" aria-labelledby="dpT">
+  <div class="dlg-h"><h2 id="dpT">Çmimet e mia dhe kompania</h2><span class="sp"></span><button class="btn" type="button" data-close>Mbyll</button><button class="btn pri" type="button" id="bPricesSave">Ruaj çmimet</button></div>
+  <div class="dlg-b">
+    <p class="lockline"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span id="storeNote">Çmimet ruhen vetëm për llogarinë tënde dhe nuk dalin në ofertën e klientit.</span></p>
+    <div id="pricesForm" style="display:grid;gap:18px"></div>
+  </div>
+</dialog>
+
+<dialog id="dlgProjects" aria-labelledby="dprT">
+  <div class="dlg-h"><h2 id="dprT">Projektet e ruajtura</h2><span class="sp"></span><button class="btn" type="button" data-close>Mbyll</button></div>
+  <div class="dlg-b"><div class="plist" id="projList"></div></div>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<style>
+[hidden] { display: none !important }
+html, body { margin: 0 }
+:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px) }
+.reqbar { display: grid; gap: 8px; background: var(--panel); border: 1px solid var(--accent); border-radius: 8px; padding: 10px 14px; box-shadow: inset 4px 0 0 var(--accent) }
+.reqbar.warn { border-color: var(--warn); box-shadow: inset 4px 0 0 var(--warn) }
+.rb-main { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: baseline }
+.rb-main b { font-family: var(--f-cond); font-size: 16px; letter-spacing: .02em }
+.rb-sum { color: var(--muted); font-size: 13px } .rb-note { font-size: 12.5px; color: var(--muted); flex-basis: 100% }
+.rb-confirm { background: var(--panel-2); border-radius: 6px; padding: 10px 12px; display: grid; gap: 8px; font-size: 13.5px }
+.rb-confirm .bad { color: var(--bad) }
+.rst { display: inline-block; font-family: var(--f-cond); font-weight: 600; font-size: 12.5px; letter-spacing: .03em; padding: 2px 9px; border-radius: 99px; background: var(--panel-2); color: var(--muted); white-space: nowrap }
+.rst-new { background: var(--warn-bg); color: var(--warn) } .rst-sent { background: var(--steel-soft); color: var(--steel) } .rst-ok { background: var(--ok-bg); color: var(--ok) }
+.wait { display: block; font-size: 11.5px; color: var(--muted); margin-top: 3px } .wait.late { color: var(--bad); font-weight: 600 }
+.prow small { display: block }
+#loginOv { position: fixed; inset: 0; z-index: 200; background: var(--bg); display: grid; place-items: center; padding: 16px }
+#loginOv[hidden] { display: none }
+.login { width: min(380px, 100%); background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 22px; display: grid; gap: 12px }
+.login h2 { margin: 0; font-family: var(--f-cond); font-size: 22px; letter-spacing: .03em }
+.login .mark { font-family: var(--f-cond); font-weight: 700; letter-spacing: .14em; color: var(--accent); font-size: 12px }
+.login p.msg { margin: 0; color: var(--bad); font-size: 13px }
+</style>
+<div id="loginOv" hidden>
+  <form class="login" id="loginForm">
+    <span class="mark">ONI-EL</span>
+    <h2>Hyrja në panel</h2>
+    <div class="f"><label for="lgEmail">Email</label><div class="inp"><input id="lgEmail" type="email" autocomplete="username" required></div></div>
+    <div class="f"><label for="lgPass">Fjalëkalimi</label><div class="inp"><input id="lgPass" type="password" autocomplete="current-password" required></div></div>
+    <p class="msg" id="loginMsg" hidden></p>
+    <button class="btn pri" id="loginBtn" type="submit">Hyr</button>
+  </form>
+</div>
+<dialog id="dlgReq" aria-labelledby="drqT">
+  <div class="dlg-h"><h2 id="drqT">Kërkesat nga website-i</h2><span class="sp"></span>
+    <div class="inp" style="max-width:220px"><select id="reqFilter" aria-label="Filtri"><option value="open">Presin ofertë</option><option value="oferte_gati">Ofertë e dërguar</option><option value="konfirmuar">Të konfirmuara</option><option value="all">Të gjitha</option></select></div>
+    <button class="btn" type="button" data-close>Mbyll</button></div>
+  <div class="dlg-b"><div class="plist" id="reqList"></div></div>
+</dialog>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="kapanon-config.js"></script>
+<script src="kapanon-engine-admin.js"></script>
+<script src="kapanon-view3d.js"></script>
+<script src="kapanon-draw.js"></script>
+<script src="kapanon-pdf.js"></script>
+<script src="kapanon-admin.js"></script>
+<script src="kapanon-app.js"></script>
+</body>
+</html>

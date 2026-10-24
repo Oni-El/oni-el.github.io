@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="sq">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+  <title>Konfiguro kapanonin · Oni-El</title>
+  <meta name="description" content="Konfiguroni kapanonin tuaj metalik online: dimensionet, mbulesa, mezanina, shkallët dhe dyert. Oni-El ju dërgon ofertën brenda 24 orësh."/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    /* Stili i website-it Oni-El: sfond grafit, theks portokalli */
+    :root {
+      --bg: #111827; --panel: #162030; --panel-2: #1a2535; --line: #263548; --ink: #e8eaf0; --muted: #a0aab8; --dim: #607088;
+      --accent: #f4a012; --ok: #4ade80; --bad: #f87171;
+      --view-bg: #0f1722; --view-ground: #152132; --view-grid: #22324a; --view-slab: #2a3a50;
+      color-scheme: dark;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0 }
+    [hidden] { display: none !important }
+    body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--ink); font-size: 14px; line-height: 1.5; -webkit-font-smoothing: antialiased }
+    body::before { content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background-image: linear-gradient(rgba(244,160,18,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(244,160,18,.045) 1px, transparent 1px);
+      background-size: 80px 80px }
+    a { color: var(--accent) }
+    button, input, select, textarea { font: inherit; color: inherit }
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+    .nav { position: sticky; top: 0; z-index: 20; background: rgba(10,14,20,.96); border-bottom: 1px solid var(--line); backdrop-filter: blur(10px); display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 64px; padding: 0 max(16px, env(safe-area-inset-right, 0px)) 0 max(16px, env(safe-area-inset-left, 0px)) }
+    .logo { text-decoration: none; display: flex; flex-direction: column; line-height: 1 }
+    .logo b { font-size: 21px; font-weight: 800; letter-spacing: 3px; color: #fff } .logo b span { color: var(--accent) }
+    .logo small { font-size: 9px; letter-spacing: 3px; text-transform: uppercase; color: var(--dim); margin-top: 3px }
+    .nav a.back { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .5px; text-decoration: none }
+    .nav a.back:hover { color: var(--accent) }
+    main { position: relative; z-index: 1; max-width: 1440px; margin: 0 auto; padding: 22px max(16px, env(safe-area-inset-right, 0px)) 40px max(16px, env(safe-area-inset-left, 0px)) }
+    .hero { margin-bottom: 18px }
+    .eyebrow { font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 600 }
+    h1 { font-size: clamp(26px, 4vw, 38px); font-weight: 800; letter-spacing: -.5px; margin: 6px 0 6px; text-wrap: balance }
+    .hero p { color: var(--muted); max-width: 68ch; font-size: 15px }
+    .layout { display: grid; grid-template-columns: 400px minmax(0, 1fr); gap: 18px; align-items: start }
+    @media (max-width: 980px) { .layout { grid-template-columns: minmax(0, 1fr) } .viz { position: static !important; order: -1 } }
+    .cfg { display: grid; gap: 12px; min-width: 0 }
+    .step, .card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 16px }
+    .step h3 { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 700; letter-spacing: .3px; text-transform: uppercase; margin-bottom: 12px }
+    .sn { width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: #111827; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800 }
+    .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px }
+    .f { display: flex; flex-direction: column; gap: 5px; min-width: 0 } .f.w2 { grid-column: span 2 }
+    .f > label, .f > .fl { font-size: 12px; color: var(--muted); font-weight: 500 }
+    .hint, .help { font-size: 11.5px; color: var(--dim) } .hint:empty { display: none }
+    .inp { display: flex; align-items: center; background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px }
+    .inp:focus-within { border-color: var(--accent) }
+    .inp input, .inp select, .inp textarea { flex: 1; min-width: 0; border: 0; background: transparent; padding: 9px 10px; outline: none }
+    .inp select option { background: #1a2535 }
+    .inp input[type=number] { text-align: right; font-variant-numeric: tabular-nums; -moz-appearance: textfield }
+    .inp input::-webkit-outer-spin-button, .inp input::-webkit-inner-spin-button { -webkit-appearance: none }
+    .inp .u { padding-right: 10px; color: var(--dim); font-size: 12px }
+    .inp :disabled { opacity: .75; cursor: default }
+    .seg { display: flex; gap: 2px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px; padding: 2px }
+    .seg button { flex: 1 1 0; border: 0; background: transparent; color: var(--muted); padding: 7px 4px; border-radius: 3px; cursor: pointer; font-size: 12.5px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+    .seg button[aria-pressed="true"] { background: var(--accent); color: #111827; font-weight: 700 }
+    .seg button:disabled { cursor: default }
+    .tog { display: flex; align-items: center; gap: 10px; font-size: 13.5px; cursor: pointer; padding: 3px 0 }
+    .tog input { appearance: none; width: 34px; height: 19px; border-radius: 99px; background: var(--line); position: relative; flex: none; cursor: pointer }
+    .tog input::after { content: ''; position: absolute; top: 2px; left: 2px; width: 15px; height: 15px; border-radius: 50%; background: var(--ink); transition: transform .15s }
+    .tog input:checked { background: var(--accent) } .tog input:checked::after { transform: translateX(15px); background: #111827 }
+    .tog input:disabled { opacity: .6 }
+    .viz { position: sticky; top: 80px; display: grid; gap: 10px; min-width: 0 }
+    .vtabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); overflow-x: auto }
+    .vtabs button { border: 0; background: none; padding: 9px 14px; color: var(--muted); font-weight: 600; font-size: 13px; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap }
+    .vtabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent) }
+    .viewer { position: relative; height: min(66vh, 620px); min-height: 360px; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--view-bg) }
+    .viewer canvas { display: block; width: 100%; height: 100%; touch-action: none }
+    .vtools { position: absolute; top: 10px; left: 10px; right: 10px; display: flex; gap: 8px; flex-wrap: wrap; z-index: 2; pointer-events: none }
+    .vgroup { pointer-events: auto; display: flex; gap: 2px; background: rgba(17,24,39,.9); border: 1px solid var(--line); border-radius: 4px; padding: 2px }
+    .vgroup button { border: 0; background: none; color: var(--muted); padding: 5px 9px; border-radius: 3px; cursor: pointer; font-size: 12px; white-space: nowrap }
+    .vgroup button[aria-pressed="true"] { background: var(--ink); color: #111827 }
+    .drawing { border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: #162030; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none }
+    .drawing svg { display: block; width: 100%; height: auto; pointer-events: none }
+    .drnote { font-size: 12px; color: var(--dim); padding: 8px 2px 0 }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px }
+    .chip { background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 7px 11px; display: flex; flex-direction: column; min-width: 0 }
+    .chip span { font-size: 10.5px; color: var(--dim); text-transform: uppercase; letter-spacing: 1px } .chip b { font-size: 14px; font-variant-numeric: tabular-nums }
+    .btn { border: 1px solid var(--line); background: var(--panel-2); color: var(--ink); border-radius: 4px; padding: 10px 16px; cursor: pointer; font-weight: 600; white-space: nowrap }
+    .btn:hover { border-color: var(--accent) }
+    .btn.pri { background: var(--accent); color: #111827; border-color: var(--accent) }
+    .btn:disabled { opacity: .6; cursor: default }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center }
+    .msg { font-size: 13px; padding: 8px 10px; border-radius: 4px } .msg.err { background: rgba(248,113,113,.12); color: var(--bad) }
+    .consent { display: flex; gap: 9px; align-items: flex-start; font-size: 12.5px; color: var(--muted) } .consent input { margin-top: 3px; accent-color: var(--accent) }
+    .muted { color: var(--muted) } .small { font-size: 12px }
+    #myReq { font-size: 13px; color: var(--muted); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 10px 14px; margin-bottom: 14px }
+    /* portali */
+    #portal { display: grid; gap: 12px; margin-bottom: 16px }
+    .flash { background: rgba(74,222,128,.1); border: 1px solid rgba(74,222,128,.4); color: var(--ok); padding: 10px 14px; border-radius: 6px; font-size: 14px }
+    .sc-head { display: flex; justify-content: space-between; gap: 14px; align-items: flex-start; flex-wrap: wrap }
+    .code { font-size: 11px; letter-spacing: 2px; color: var(--accent); font-weight: 700 }
+    .status-card h2 { font-size: 22px; font-weight: 800; margin: 2px 0 }
+    .pill { font-size: 12px; font-weight: 700; padding: 5px 12px; border-radius: 99px; background: var(--panel-2); border: 1px solid var(--line); white-space: nowrap }
+    .pill.st-oferte_gati { background: var(--accent); color: #111827; border-color: var(--accent) }
+    .pill.st-konfirmuar { background: rgba(74,222,128,.15); color: var(--ok); border-color: rgba(74,222,128,.4) }
+    .tl { list-style: none; display: flex; gap: 6px; margin: 16px 0 10px; flex-wrap: wrap }
+    .tl li { display: flex; align-items: center; gap: 8px; color: var(--dim); font-size: 13px; flex: 1 1 150px; border-top: 3px solid var(--line); padding-top: 8px }
+    .tl li i { font-style: normal; width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--line); display: inline-flex; align-items: center; justify-content: center; font-size: 11px; flex: none }
+    .tl li.done { color: var(--ink); border-top-color: var(--accent) } .tl li.done i { background: var(--accent); color: #111827; border-color: var(--accent) }
+    .lead { color: var(--muted) }
+    .offer { border-color: rgba(244,160,18,.5) }
+    .of-head { display: flex; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 12px }
+    .lbl { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--dim) }
+    .price { font-size: clamp(28px, 4vw, 38px); font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums; line-height: 1.1 }
+    .valid { text-align: right } .valid b { display: block; font-size: 15px }
+    table.pt, table.dt { width: 100%; border-collapse: collapse; font-size: 13.5px }
+    table.pt td { padding: 7px 4px; border-bottom: 1px solid var(--line) } table.pt td:last-child { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap }
+    table.pt tr.sub td { font-weight: 700 } table.pt tr.fin td { background: var(--accent); color: #111827; font-weight: 800; padding: 9px 8px }
+    details.desc { margin-top: 12px } details.desc summary { cursor: pointer; color: var(--accent); font-weight: 600; font-size: 13.5px; padding: 6px 0 }
+    table.dt td { padding: 6px 4px; border-bottom: 1px solid var(--line); vertical-align: top } table.dt td:first-child { color: var(--muted); width: 32%; padding-right: 10px }
+    .acts { margin-top: 14px }
+    .confirm { margin-top: 12px; background: var(--panel-2); border: 1px solid var(--accent); border-radius: 6px; padding: 12px 14px; display: grid; gap: 10px }
+    .ok-line { color: var(--ok); font-weight: 600; margin-top: 12px }
+    #editBar { position: sticky; bottom: 0; z-index: 15; background: rgba(17,24,39,.97); border: 1px solid var(--accent); border-radius: 6px; padding: 12px 14px; display: grid; gap: 8px }
+    #editBar textarea { width: 100%; background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px; padding: 8px 10px; min-height: 52px; resize: vertical }
+    body.portal .hero { display: none }
+    footer { position: relative; z-index: 1; border-top: 1px solid var(--line); color: var(--dim); font-size: 12px; text-align: center; padding: 18px 16px 26px }
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important } }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <a class="logo" href="index.html"><b>ONI<span>-EL</span></b><small>Konstruksione metalike</small></a>
+    <a class="back" href="index.html">← Faqja kryesore</a>
+  </nav>
+  <main>
+    <section class="hero" id="heroNew">
+      <div class="eyebrow">Konfiguruesi online</div>
+      <h1>Konfiguro kapanonin tënd</h1>
+      <p>Zgjidhni dimensionet dhe opsionet, shikoni modelin 3D dhe na e dërgoni kërkesën. Inxhinieri ynë e dimensionon strukturën dhe ju dërgon ofertën me email brenda 24 orësh.</p>
+    </section>
+    <div id="myReq" hidden></div>
+    <section id="portal" hidden></section>
+    <div class="layout">
+      <div class="cfg">
+        <div id="cfgSteps" class="cfg"></div>
+        <section class="step" id="contactStep">
+          <h3><span class="sn">6</span>Të dhënat tuaja</h3>
+          <form id="reqForm" class="fields" novalidate>
+            <div class="f w2"><label for="r-name">Emri dhe mbiemri *</label><div class="inp"><input id="r-name" name="name" required autocomplete="name"></div></div>
+            <div class="f w2"><label for="r-company">Kompania</label><div class="inp"><input id="r-company" name="company" autocomplete="organization"></div></div>
+            <div class="f"><label for="r-email">Email *</label><div class="inp"><input id="r-email" name="email" type="email" required autocomplete="email"></div></div>
+            <div class="f"><label for="r-phone">Telefon / WhatsApp</label><div class="inp"><input id="r-phone" name="phone" type="tel" autocomplete="tel" placeholder="+355 6x xxx xxxx"></div></div>
+            <div class="f w2"><label for="r-site">Vendi i objektit</label><div class="inp"><input id="r-site" name="site" placeholder="p.sh. Cërrik, Elbasan"></div></div>
+            <div class="f w2"><label for="r-note">Shënime</label><div class="inp"><textarea id="r-note" name="note" rows="3" placeholder="Afati, përdorimi, kërkesa të veçanta…"></textarea></div></div>
+            <label class="consent w2" style="grid-column:span 2"><input type="checkbox" name="consent" value="1"><span>Pranoj që Oni-El të përdorë këto të dhëna për të më dërguar ofertën dhe për të më kontaktuar.</span></label>
+            <div class="w2 row" style="grid-column:span 2"><button class="btn pri" id="bSend" type="submit">Dërgo kërkesën për ofertë</button><span class="muted small">Pa detyrim. Oferta vjen brenda 24 orësh.</span></div>
+            <p class="msg" id="sendMsg" hidden style="grid-column:span 2"></p>
+          </form>
+        </section>
+        <div id="editBar" hidden>
+          <span id="editNote" class="small muted"></span>
+          <textarea id="editMsg" placeholder="Shënim për inxhinierin (opsional)"></textarea>
+          <div class="row"><button class="btn pri" id="bSaveEdit" type="button">Ruaj ndryshimet</button><button class="btn" id="bCancelEdit" type="button">Anulo</button></div>
+          <p class="msg" id="editErr" hidden></p>
+        </div>
+      </div>
+      <div class="viz">
+        <div class="vtabs" role="tablist">
+          <button type="button" role="tab" data-t="m3d" aria-selected="true">Modeli 3D</button>
+          <button type="button" role="tab" data-t="plan" aria-selected="false">Planimetria</button>
+          <button type="button" role="tab" data-t="front" aria-selected="false">Pamja ballore</button>
+        </div>
+        <div id="pane-m3d">
+          <div class="viewer nodl" id="viewer">
+            <div class="vtools">
+              <div class="vgroup" id="vView"><button type="button" data-v="iso" aria-pressed="true">3D</button><button type="button" data-v="front" aria-pressed="false">Ballore</button><button type="button" data-v="side" aria-pressed="false">Anësore</button><button type="button" data-v="top" aria-pressed="false">Nga lart</button></div>
+              <div class="vgroup" id="vClad"><button type="button" data-c="2" aria-pressed="true">E mbyllur</button><button type="button" data-c="1" aria-pressed="false">Transparente</button><button type="button" data-c="0" aria-pressed="false">Skeleti</button></div>
+            </div>
+          </div>
+        </div>
+        <div id="pane-plan" hidden><div class="drawing nodl" id="drPlan"></div><p class="drnote">Vizatim paraprak për ofertë. Vizatimet e zbatimit përgatiten pas konfirmimit të porosisë.</p></div>
+        <div id="pane-front" hidden><div class="drawing nodl" id="drFront"></div><p class="drnote">Vizatim paraprak për ofertë. Vizatimet e zbatimit përgatiten pas konfirmimit të porosisë.</p></div>
+        <div class="chips" id="chips"></div>
+      </div>
+    </div>
+  </main>
+  <footer>Oni-El · Elbasan, Shqipëri · +355 68 315 5705 · NIPT F00101475L</footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+  <script src="kapanon-config.js"></script>
+  <script src="kapanon-engine.js"></script>
+  <script src="kapanon-view3d.js"></script>
+  <script src="kapanon-draw.js"></script>
+  <script src="kapanon-client.js"></script>
+</body>
+</html>
