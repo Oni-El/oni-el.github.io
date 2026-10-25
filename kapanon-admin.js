@@ -76,12 +76,15 @@
       if (!c) { setBar('<b>Supabase nuk është konfiguruar.</b> Plotëso kapanon/config.js me Project URL dhe çelësin anon.', 'warn'); return; }
       const { data } = await c.auth.getSession();
       if (!data.session || !(await isAdmin())) await loginUI();
+      // erdhi nga paneli i dokumenteve: pas hyrjes kthehet atje
+      if (new URLSearchParams(location.search).get('next') === 'panel.html') { location.replace('panel.html'); return new Promise(() => { }); }
       $('#bLogout').hidden = false;
     },
     onReady(api) {
       app = api;
       $('#bReq').hidden = false;
       $('#bReq').addEventListener('click', openList);
+      const bd = $('#bDocs'); if (bd) { bd.hidden = false; bd.addEventListener('click', () => { location.href = 'panel.html'; }); }
       $('#bLogout').addEventListener('click', async () => { await client().auth.signOut(); location.reload(); });
       refreshList().then(() => {
         const rid = new URLSearchParams(location.search).get('r');

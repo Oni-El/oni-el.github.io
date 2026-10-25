@@ -112,10 +112,15 @@
     font-weight: 700;
     color: #f5a623;
   }
+  body.locked .wrap { visibility: hidden; }
+  .toplinks { display: flex; justify-content: space-between; margin-bottom: 14px; font-size: 0.85rem; }
+  .toplinks a, .toplinks button { color: #9a9ab0; text-decoration: none; background: none; border: 0; padding: 0; font: inherit; cursor: pointer; }
+  .toplinks a:hover, .toplinks button:hover { color: #f5a623; }
 </style>
 </head>
-<body>
+<body class="locked">
 <div class="wrap">
+  <div class="toplinks"><a href="admin-kapanon.html">← Kalkulatori i kapanonëve</a><button type="button" id="logoutBtn">Dil</button></div>
   <h1>ONI<span>-EL</span> — Panel Dokumentesh</h1>
   <p class="sub">Vetëm për përdorim të brendshëm. Dërgo Ofertë, Konfirmim Porosie, ose Faturë Proformë direkt nga këtu.</p>
 
@@ -327,6 +332,27 @@
       submitBtn.textContent = 'Dërgo Dokumentin';
     });
   });
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="kapanon-config.js"></script>
+<script>
+  // vetëm administratori i futur me llogarinë e Supabase e sheh këtë faqe
+  (function () {
+    var CFG = window.KAP_CONFIG || {};
+    function toLogin() { location.replace('admin-kapanon.html?next=panel.html'); }
+    var sb;
+    try { sb = window.supabase.createClient(CFG.url, CFG.anonKey); } catch (e) { return toLogin(); }
+    sb.auth.getSession().then(function (res) {
+      if (!res.data || !res.data.session) return toLogin();
+      return sb.rpc('is_admin').then(function (r) {
+        if (r.error || r.data !== true) return toLogin();
+        document.body.classList.remove('locked');
+      });
+    }).catch(toLogin);
+    document.getElementById('logoutBtn').addEventListener('click', function () {
+      sb.auth.signOut().then(function () { location.replace('index.html'); });
+    });
+  })();
 </script>
 </body>
 </html>
