@@ -121,6 +121,13 @@
 
   <form id="docForm">
     <div class="card">
+      <label>Kodi PIN i panelit *</label>
+      <input type="password" id="pin" required autocomplete="off" placeholder="••••••••">
+      <label class="hint" style="display:flex;gap:8px;align-items:center;margin-top:8px"><input type="checkbox" id="pinRemember" style="width:auto"> Mbaje mend në këtë pajisje</label>
+      <div class="hint">Pa kodin e saktë dokumenti nuk krijohet dhe email-i nuk dërgohet.</div>
+    </div>
+
+    <div class="card">
       <label>Lloji i dokumentit</label>
       <div class="doctype-buttons">
         <button type="button" data-type="oferte" class="active">Ofertë</button>
@@ -195,6 +202,17 @@
 <script>
   var WEBHOOK_URL = 'https://hook.eu1.make.com/79iq9kr5dvdiug77xbshua0wnhwtm574';
 
+  function restorePin() {
+    try {
+      var saved = localStorage.getItem('oniel.pin');
+      if (saved) {
+        document.getElementById('pin').value = saved;
+        document.getElementById('pinRemember').checked = true;
+      }
+    } catch (e) {}
+  }
+  restorePin();
+
   var docTypeButtons = document.querySelectorAll('.doctype-buttons button');
   var docTypeInput = document.getElementById('docType');
   var proformaCard = document.getElementById('proformaCard');
@@ -258,8 +276,15 @@
     var nrDokumenti = generateDocNumber(prefixMap[docType]);
     var dataFormatuar = new Date().toLocaleDateString('sq-AL');
 
+    var pin = document.getElementById('pin').value.trim();
+    try {
+      if (document.getElementById('pinRemember').checked) localStorage.setItem('oniel.pin', pin);
+      else localStorage.removeItem('oniel.pin');
+    } catch (e) {}
+
     var fd = new FormData();
     fd.append('_action', 'generate_document');
+    fd.append('pin', pin);
     fd.append('docType', docType);
     fd.append('dealId', document.getElementById('dealId').value);
     fd.append('emriKlientit', document.getElementById('emriKlientit').value);
@@ -292,6 +317,7 @@
       submitBtn.disabled = false;
       submitBtn.textContent = 'Dërgo Dokumentin';
       document.getElementById('docForm').reset();
+      restorePin();
       calcTotal();
     })
     .catch(function(err) {
