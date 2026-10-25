@@ -279,7 +279,7 @@
     var total = calcTotal();
     var prefixMap = { oferte: 'OF', konfirmim: 'KP', proforme: 'FP' };
     var nrDokumenti = generateDocNumber(prefixMap[docType]);
-    var dataFormatuar = new Date().toLocaleDateString('sq-AL');
+    var _d = new Date(); var dataFormatuar = String(_d.getDate()).padStart(2, '0') + '.' + String(_d.getMonth() + 1).padStart(2, '0') + '.' + _d.getFullYear();
 
     var pin = document.getElementById('pin').value.trim();
     try {
