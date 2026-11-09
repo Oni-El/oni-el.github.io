@@ -172,6 +172,9 @@ table.t tr.grp td { background: var(--panel-2); font-weight: 600; font-family: v
 table.t tr.tot td { font-weight: 600; border-top: 1.5px solid var(--ink) }
 table.t tr.fin td { background: var(--ink); color: var(--panel); font-weight: 700; font-size: 14.5px }
 ul.as { margin: 0; padding-left: 18px; color: var(--muted); font-size: 13px; line-height: 1.55 } ul.as li { margin: 2px 0 }
+.dlbar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin: 0 0 12px }
+.dlbar small { color: var(--muted); font-size: 12.5px; flex: 1 1 260px }
+.restricted .dlbar { display: none !important }
 .drw { display: grid; gap: 12px }
 .drw .card { padding: 8px }
 .drw svg { border-radius: 4px }
@@ -306,8 +309,8 @@ dialog::backdrop { background: rgba(10, 14, 18, .55) }
         <div class="v-dims" id="vDims"></div>
       </div>
     </section>
-    <section class="tab" id="t-draw" role="tabpanel" aria-labelledby="tb-draw"><div class="drw" id="drawings"></div></section>
-    <section class="tab" id="t-calc" role="tabpanel" aria-labelledby="tb-calc"><div id="report"></div></section>
+    <section class="tab" id="t-draw" role="tabpanel" aria-labelledby="tb-draw"><div class="dlbar"><button class="btn pri" id="bDrawPdf" type="button">Shkarko vizatimet (PDF)</button><small>Fletë A3: pamja 3D, prerja, planimetria, fasadat dhe specifikimi i elementeve. Pa çmime.</small></div><div class="drw" id="drawings"></div></section>
+    <section class="tab" id="t-calc" role="tabpanel" aria-labelledby="tb-calc"><div class="dlbar"><button class="btn pri" id="bCalcPdf" type="button">Shkarko llogaritjen (PDF)</button><small>Raport A4: ngarkesat, kontrollet, reaksionet në bazë dhe sasitë e çelikut. Pa çmime.</small></div><div id="report"></div></section>
     <section class="tab internal" id="t-cost" role="tabpanel" aria-labelledby="tb-cost"><div id="costs"></div></section>
     <section class="tab" id="t-offer" role="tabpanel" aria-labelledby="tb-offer">
       <div class="offer-wrap">

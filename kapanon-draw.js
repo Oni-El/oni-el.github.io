@@ -35,6 +35,7 @@ window.Draw = (function () {
     return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="9" fill="${pal.bg}" stroke="${pal.steel}" stroke-width="1.3"/>` + txt(x, y + 4, t, pal, { size: 11, w: 600 });
   }
   function titleBlock(w, h, pal, meta, title) {
+    if (meta && meta.bare) return '';
     const bw = 230, bh = 38, x = w - bw - 10, y = h - bh - 8;
     return line(10, h - 52, w - 10, h - 52, pal.dim, 0.4) + txt(14, h - 22, 'Vizatim paraprak për ofertë · kuotat në metra', pal, { size: 10.5, anchor: 'start', fill: pal.dim }) + `<rect x="${x}" y="${y}" width="${bw}" height="${bh}" fill="${pal.bg}" stroke="${pal.ink}" stroke-width="0.9"/>` +
       line(x + 64, y, x + 64, y + bh, pal.ink, 0.7) + line(x + 64, y + bh / 2, x + bw, y + bh / 2, pal.ink, 0.5) +

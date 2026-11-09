@@ -351,7 +351,7 @@
   function meta() { return { company: (settings.company.name || 'Oni-El').toUpperCase(), project: inp.name }; }
   function renderDrawings() {
     const p = screenPal(), m = meta();
-    $('#drawings').innerHTML = [Draw.section(res, engIn, p, m), Draw.plan(res, engIn, p, m), Draw.side(res, engIn, p, m)].map(s => `<div class="card">${s}</div>`).join('');
+    $('#drawings').innerHTML = [Draw.section(res, engIn, p, m), Draw.plan(res, engIn, p, m), Draw.side(res, engIn, p, m), Draw.front(res, engIn, p, m)].map(s => `<div class="card">${s}</div>`).join('');
   }
 
   /* ---------------- raporti strukturor ---------------- */
@@ -585,6 +585,141 @@
     } catch (e) { console.error(e); toast('PDF-ja nuk u krijua: ' + (e.message || e)); }
     btn.disabled = false; btn.textContent = 'Shkarko ofertën (PDF)';
   }
+  /* ---------------- specifikimi i elementeve (pa çmime) ---------------- */
+  function specTable() {
+    const r = res, q = r.qty, fr = r.frame, nF = r.nFrames, el = fr.fr.elems;
+    const rows = [], k0 = v => fmt(v, 0), m1 = v => fmt(v, 1);
+    const add = (name, sec, n, len, kg) => { if (kg > 0.5) rows.push({ c: [rows.length + 1, name, sec, n == null ? '—' : k0(n), len == null ? '—' : m1(len), k0(kg)] }); };
+    const cL = el.filter(e => e.g === 'col').reduce((a, e) => a + e.L, 0), rL = el.filter(e => e.g === 'raf').reduce((a, e) => a + e.L, 0);
+    const nRaf = (fr.fr.xs.length - 1) * (inp.roof === 'duo' ? 2 : 1);
+    add('Kolona portali', fr.col.name + ' · ' + inp.grade, nF * fr.fr.xs.length, cL * nF, el.filter(e => e.g === 'col').reduce((a, e) => a + e.L * e.sec.kg, 0) * nF);
+    add('Trarë çatie' + (inp.haunch ? ' (me haunch)' : ''), fr.raf.name + ' · ' + inp.grade, nF * nRaf, rL * nF, el.filter(e => e.g === 'raf').reduce((a, e) => a + e.L * e.sec.kg * (e.haunch ? 1.6 : 1), 0) * nF);
+    add('Rigla çatie', r.purlin.sec.name + ' @' + f2(r.purlin.sp) + ' m', r.purlin.lines, r.purlin.lines * inp.L, q.steel.purlin);
+    add('Rigla fasade', r.rail.sec.name + ' @' + f2(r.rail.sp) + ' m', null, q.steel.rail / r.rail.sec.kg / 1.03, q.steel.rail);
+    if (r.post) add('Kolona të fasadës ballore', r.post.sec.name, 2 * r.posts.length, 2 * r.posts.reduce((a, p) => a + p.h, 0), q.steel.post);
+    const b = r.brace;
+    add('Kontraventime çatie', b.roofRod.name, null, b.roofBrLen, b.roofBrLen * b.roofRod.kg);
+    add('Kontraventime muri', b.wallRod.name, null, b.wallBrLen, b.wallBrLen * b.wallRod.kg);
+    add('Shufra strehe', b.strut.sec.name, null, b.strutLen, b.strutLen * b.strut.sec.kg);
+    add('Kornizat e dyerve', 'profil çeliku', null, null, q.steel.doors);
+    if (r.mezz && q.mezzParts) {
+      const m = r.mezz, P = q.mezzParts;
+      add('Mezaninë · trarë kryesorë', m.sec1.sec.name, m.ny + 1, (m.ny + 1) * m.W, P.k1);
+      add('Mezaninë · trarë dytësorë', m.sec2.sec.name, m.nx * m.nsec + 1, (m.nx * m.nsec + 1) * m.L, P.k2);
+      add('Mezaninë · kolona', m.col.sec.name, m.nCols, m.nCols * m.Hm, P.kc);
+      add('Mezaninë · kontraventime', m.rod.name, null, m.nbb * 4 * m.Ld, P.kb);
+      add('Mezaninë · llamarinë me lot', m.deck.name, null, null, P.kd);
+    }
+    if (r.stairs) add('Shkallët', r.stairs.st.sec.name + ' + shkelëse', r.stairs.count, null, q.steel.stairs);
+    add('Lidhje, pllaka baze, bulona', inp.connPct + '% e peshës', null, null, q.steel.conn);
+    rows.push({ tot: true, c: ['', 'Totali i strukturës metalike', '', '', '', k0(q.steelTotal)] });
+    return {
+      head: ['Nr.', 'Elementi', 'Profili', 'Copë', 'Gjatësia (m)', 'Pesha (kg)'], widths: [16, 120, 100, 34, 50, 60], right: [false, false, false, true, true, true], rows,
+      notes: ['Çeliku ' + inp.grade + ' · ' + (inp.coat === 'zink' ? 'zinkim në të nxehtë' : 'antikorrozive + bojë përfundimtare') + ' · ' + fmt(q.steelTotal / q.area.ground, 1) + ' kg/m² sipërfaqe përdhese.',
+        'Sasitë janë nga paradimensionimi; gjatësitë e prerjes dhe lidhjet konfirmohen në vizatimet e punëtorisë.']
+    };
+  }
+  function docHead() {
+    const o = offerData();
+    return { company: settings.company, project: inp.name, title: o.title, subtitle: o.subtitle, client: inp.client, site: inp.site, no: inp.offerNo, dateStr: dstr(new Date()) };
+  }
+  async function busy(id, label, fn) {
+    if (!res) return;
+    if (!window.jspdf) { toast('Biblioteka PDF nuk u ngarkua. Rifresko faqen.'); return; }
+    const btn = $(id), t0 = btn.textContent; btn.disabled = true; btn.textContent = label;
+    try { await fn(); } catch (e) { console.error(e); toast('PDF-ja nuk u krijua: ' + (e.message || e)); }
+    btn.disabled = false; btn.textContent = t0;
+  }
+  function makeDrawPDF() {
+    return busy('#bDrawPdf', 'Duke përgatitur vizatimet…', async () => {
+      const m = Object.assign(meta(), { bare: true });
+      const list = [['Prerja tërthore · portali tipik', Draw.section], ['Planimetria e kolonave', Draw.plan], ['Fasada anësore', Draw.side], ['Pamja ballore', Draw.front]];
+      const imgs = await Promise.all(list.map(([, f]) => Draw.toPNG(f(res, engIn, PRINT_PAL, m), 3)));
+      const sheets = list.map(([t], i) => Object.assign({ title: t }, imgs[i]));
+      ensure3D();
+      if (View3D.ready) { try { sheets.unshift({ title: 'Pamja 3D', url: View3D.snapshot(2400, 1350, true), w: 16, h: 9, fmt: 'JPEG' }); } catch (e) { } }
+      sheets.push({ title: 'Specifikimi i elementeve', table: specTable() });
+      const buf = OfferPDF.drawings(Object.assign(docHead(), { sheets }));
+      await saveFile('Vizatimet - ' + safeName(inp.client || inp.name) + '.pdf', new Blob([buf], { type: 'application/pdf' }));
+    });
+  }
+  function calcBlocks() {
+    const r = res, fr = r.frame, cl = r.cl, q = r.qty, b = r.brace, ctx = r.ctx;
+    const u2 = v => fmt(v, 2), B = [];
+    const mc = fr.members.col || { u: 0 }, mr = fr.members.raf || { u: 0 };
+    const ok = fr.ok && (!r.mezz || (r.mezz.sec1.u <= 1 && r.mezz.sec2.u <= 1 && r.mezz.col.u <= 1)) && r.purlin.u <= 1 && r.rail.u <= 1 && (!r.post || r.post.u <= 1);
+    B.push({ h: 'Të dhënat e objektit', kv: [
+      ['Rezultati', (ok ? 'Struktura kalon' : 'Struktura NUK kalon') + ' · shfrytëzimi maksimal i portalit ' + u2(fr.util)],
+      ['Dimensionet', f2(inp.L) + ' × ' + f2(inp.W) + ' m · lartësia në strehë ' + f2(inp.H) + ' m · në kulm ' + f2(cl.hr) + ' m'],
+      ['Çatia', (inp.roof === 'duo' ? 'me dy ujëra' : 'me një ujë') + ', ' + fmt(inp.slopePct, 1) + '% (' + f1(deg()) + '°) · ' + inp.nSpans + ' hapësirë/a, drita ' + f2(r.B) + ' m'],
+      ['Portalet', r.nFrames + ' portale × interaks ' + f2(r.bay) + ' m'],
+      ['Çeliku · bazamenti', inp.grade + ' · ' + (inp.base === 'fixed' ? 'i ngurtë' : 'me nyje') + (inp.haunch ? ' · haunch në strehë, L = ' + (fr.fr.Lh ? f2(fr.fr.Lh) + ' m' : '—') : '')],
+      ['Mbulesa', (inp.roofType === 'panel' ? 'panel ' + inp.roofT + ' mm' : 'llamarinë') + ' (çati) · ' + (inp.wallType === 'panel' ? 'panel ' + inp.wallT + ' mm' : 'llamarinë') + ' (fasadë)']
+    ] });
+    B.push({ h: 'Ngarkesat e projektimit', kv: [
+      ['Mbulesa + rigla + instalime (G)', f2(ctx.gRoof) + ' kN/m²'],
+      ['Bora në tokë sk / në çati s', f2(inp.sk) + ' / ' + f2(cl.s) + ' kN/m²'],
+      ['Era vb · kategoria e terrenit', fmt(inp.vb, 1) + ' m/s · ' + inp.terrain],
+      ['Presioni maksimal qp(z = ' + f1(cl.hr) + ' m)', f2(cl.qp) + ' kN/m²'],
+      ['Sizmika ag · truall · q', f2(inp.ag) + ' g · ' + inp.soil + ' (S = ' + f2(cl.soilS) + ') · ' + fmt(inp.q, 1)],
+      ['Spektri i projektimit Sd', f2(cl.Sd) + ' g']
+    ].concat(inp.pv ? [['Panele fotovoltaike', '0,15 kN/m²']] : []) });
+    B.push({ h: 'Korniza portale', util: [
+      ['Kolona', fr.col.name + ' · ' + inp.grade, mc.u, (mc.gov || '') + (mc.combo ? ' · ' + mc.combo : '') + ' · N ' + fmt(mc.N, 0) + ' kN, M ' + fmt(Math.abs(mc.M || 0), 0) + ' kNm'],
+      ['Trau i çatisë', fr.raf.name + (inp.haunch ? ' + haunch' : ''), mr.u, (mr.gov || '') + (mr.combo ? ' · ' + mr.combo : '') + ' · M ' + fmt(Math.abs(mr.M || 0), 0) + ' kNm'],
+      ['Zhvendosja vertikale', fmt(fr.dv * 1000, 0) + ' / ' + fmt(fr.dvLim * 1000, 0) + ' mm', fr.uDv, 'G + S, në kulm (L/' + inp.limV + ')'],
+      ['Zhvendosja horizontale', fmt(fr.dh * 1000, 0) + ' / ' + fmt(fr.dhLim * 1000, 0) + ' mm', fr.uDh, 'Era karakteristike, në strehë (H/' + inp.limH + ')']
+    ], kv: [['αcr minimal (Horne)', fmt(fr.alphaMin, 1) + (fr.alphaMin < 10 ? ' · efektet P-Δ të amplifikuara' : '')], ['Profile të provuara', String(r.evals)]] });
+    const sec = [
+      ['Rigla çatie', r.purlin.sec.name + ' · @' + f2(r.purlin.sp) + ' m', r.purlin.u, (r.purlin.gov || '') + ' · ' + (r.purlin.cont ? 'e vazhduar' : 'e thjeshtë')],
+      ['Rigla fasade', r.rail.sec.name + ' · @' + f2(r.rail.sp) + ' m', r.rail.u, r.rail.gov]
+    ];
+    if (r.post) sec.push(['Kolona ballore', r.post.sec.name + ' · h ' + f2(r.post.hMax) + ' m', r.post.u, r.post.gov]);
+    sec.push(['Kontraventime çatie', b.roofRod.name + ' · ' + b.nbb + ' interakse', b.roofRod.u, 'N = ' + fmt(b.Rg, 0) + ' kN në skaj']);
+    sec.push(['Kontraventime muri', b.wallRod.name + (b.tiers > 1 ? ' · ' + b.tiers + ' kate' : ''), b.wallRod.u, 'F = ' + fmt(b.Fbay, 0) + ' kN për interaks (' + (b.Fseis > b.FwindLong ? 'sizmika' : 'era') + ')']);
+    sec.push(['Shufra strehe', b.strut.sec.name, b.strut.u, b.strut.gov]);
+    B.push({ h: 'Elementet dytësore', util: sec });
+    if (r.mezz) {
+      const m = r.mezz;
+      B.push({ h: 'Mezanina', util: [
+        ['Trarë kryesorë', m.sec1.sec.name + ' · L ' + f2(m.gx) + ' m', m.sec1.u, m.sec1.gov],
+        ['Trarë dytësorë', m.sec2.sec.name + ' · L ' + f2(m.gy) + ' m @' + f2(m.d), m.sec2.u, m.sec2.gov],
+        ['Kolonat', m.col.sec.name + ' · h ' + f2(m.Hm) + ' m', m.col.u, (m.col.gov || '') + ' · N = ' + fmt(m.Ncol, 0) + ' kN'],
+        ['Kontraventimet', m.rod.name + ' · ' + m.nbb + ' interakse', m.rod.u || 0, 'F sizmike = ' + fmt(m.F, 0) + ' kN']
+      ], kv: [['Sipërfaqja · përdorimi', fmt(m.area, 0) + ' m² · ' + m.use.name], ['G1 + G2 + Q', f2(m.g1) + ' + ' + f2(m.g2) + ' + ' + f2(m.Q) + ' kN/m²'], ['Soleta', m.deck.name]] });
+    }
+    if (r.stairs) {
+      const s = r.stairs;
+      B.push({ h: 'Shkallët', util: [['Trarët anësorë', s.st.sec.name + ' · ' + f2(s.runMax) + ' m', s.st.u, s.st.gov]], kv: [['Lartësia · ngritje', f2(s.rise) + ' m · ' + s.n + ' × ' + fmt(s.riser * 100, 1) + ' cm'], ['Shkelja · gjerësia', fmt(s.going * 100, 0) + ' cm · ' + f2(s.w) + ' m'], ['Pesha', fmt(s.kg, 0) + ' kg']] });
+    }
+    const CASES = [['G', 'G (e përhershme)'], ['S', 'S (bora)'], ['WP', 'W presion'], ['WN', 'W thithje'], ['W90', 'W gjatësore']];
+    const rows = [];
+    r.reactions.forEach(x => CASES.forEach(([k, n], i) => rows.push([i ? '' : 'ABCDEFG'[x.col], n, fmt(x.per[k].V, 1), fmt(x.per[k].H, 1), fmt(x.per[k].M, 1)])));
+    B.push({ h: 'Reaksionet në bazë · portal i brendshëm', table: { head: ['Kolona', 'Rasti i ngarkimit', 'V (kN)', 'H (kN)', 'M (kNm)'], widths: [22, 62, 32, 32, 32], right: [false, false, true, true, true], rows, note: 'Vlera karakteristike. V pozitiv = shtypje në themel; H në drejtim të x.' + (inp.base === 'pinned' ? ' Bazament me nyje: M = 0.' : '') } });
+    B.push({ table: { head: ['Kolona', 'GKQ: N max (kN)', 'GKQ: N min (kN)', 'GKQ: |H| max (kN)', 'GKQ: |M| max (kNm)'], widths: [22, 39.5, 39.5, 39.5, 39.5], right: [false, true, true, true, true], rows: r.reactions.map(x => ['ABCDEFG'[x.col], fmt(x.env.Nc, 1), fmt(x.env.Nt, 1), fmt(x.env.H, 1), fmt(x.env.M, 1)]), note: 'Mbështjella e kombinimeve në gjendjen kufitare të qëndrueshmërisë, për projektin e themeleve.' } });
+    const W = [['portal', 'Portalet'], ['purlin', 'Riglat e çatisë'], ['rail', 'Riglat e fasadës'], ['post', 'Kolonat ballore'], ['brace', 'Kontraventimet'], ['doors', 'Kornizat e dyerve'], ['mezz', 'Mezanina'], ['stairs', 'Shkallët'], ['conn', 'Lidhje dhe pllaka']].filter(([k]) => q.steel[k] > 0).map(([k, n]) => [n, fmt(q.steel[k], 0) + ' kg']);
+    W.push(['Totali i çelikut', fmt(q.steelTotal, 0) + ' kg · ' + fmt(q.steelTotal / q.area.ground, 1) + ' kg/m²']);
+    B.push({ h: 'Sasitë e çelikut', kv: W });
+    B.push({ h: 'Supozimet e modelit', list: [
+      'Analizë elastike e rendit të parë e kornizës 2D (metoda e ngurtësisë); efektet e rendit të dytë me metodën e amplifikimit (αcr sipas EN 1993-1-1 §5.2.1) dhe imperfeksionet globale si forca horizontale ekuivalente.',
+      'Kombinimet sipas EN 1990 (6.10): γG = 1,35 · γQ = 1,5 · ψ0 bora 0,5 · ψ0 era 0,6; rasti sizmik G + E me spektër plato (EN 1998-1, lloji 1).',
+      'Era sipas EN 1991-1-4 me koeficientë cpe,10 të mesatarizuar për zonat G/H/I/J dhe cpi = +0,2 / -0,3; bora μ1 = 0,8 me rastin asimetrik.',
+      'Fllanxha e sipërme e traut mbahet nga riglat; fllanxha e poshtme dhe ajo e brendshme e kolonës me brinjë stabilizuese çdo ' + f2(ctx.flyRaf) + ' m në tra dhe ' + f2(ctx.flyCol) + ' m në kolonë.',
+      'Portalet fundore dimensionohen si ato të brendshme. Kolonat e fasadës ballore për erë me +1,1·qp.',
+      'Rezultati është paradimensionim. Projekti i zbatimit (lidhjet, pllakat e bazës, themelet) bëhet veçmas.'
+    ] });
+    return B;
+  }
+  function makeCalcPDF() {
+    return busy('#bCalcPdf', 'Duke përgatitur llogaritjen…', async () => {
+      const m = Object.assign(meta(), { bare: true });
+      const blocks = calcBlocks();
+      const img = await Draw.toPNG(Draw.section(res, engIn, PRINT_PAL, m), 2);
+      blocks.splice(3, 0, { h: 'Skema e portalit', img });
+      const buf = OfferPDF.report(Object.assign(docHead(), { blocks }));
+      await saveFile('Llogaritja - ' + safeName(inp.client || inp.name) + '.pdf', new Blob([buf], { type: 'application/pdf' }));
+    });
+  }
   async function makePNG() {
     if (!View3D.ready) { toast('Modeli 3D nuk është gati.'); return; }
     ensure3D();
@@ -726,6 +861,8 @@
     $('#bPdf').addEventListener('click', makePDF);
     $('#bWa').addEventListener('click', copyWA);
     $('#bPng').addEventListener('click', makePNG);
+    $('#bDrawPdf').addEventListener('click', makeDrawPDF);
+    $('#bCalcPdf').addEventListener('click', makeCalcPDF);
     $('#bPrices').addEventListener('click', openPrices);
     $('#bPricesSave').addEventListener('click', savePrices);
     $('#bProjects').addEventListener('click', openProjects);
