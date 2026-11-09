@@ -230,13 +230,13 @@ window.OfferPDF = (function () {
       if (first) {
         set(18, 'bold', C.white); d.text(comp.name || 'Oni-El', M, 13);
         set(8, 'normal', [200, 210, 218]); d.text(d.splitTextToSize([comp.addr, comp.phone, comp.email].filter(Boolean).join('  ·  '), 105), M, 20);
-        set(10, 'bold', C.white); d.text('LLOGARITJA STRUKTURORE', PW - M, 11, { align: 'right' });
-        set(8.5, 'normal', [210, 218, 224]); d.text('Paradimensionim · ' + o.dateStr, PW - M, 17, { align: 'right' });
+        set(10, 'bold', C.white); d.text(o.docTitle || 'LLOGARITJA STRUKTURORE', PW - M, 11, { align: 'right' });
+        set(8.5, 'normal', [210, 218, 224]); d.text(o.docSub || 'Paradimensionim · ' + o.dateStr, PW - M, 17, { align: 'right' });
         if (o.no) d.text('Ref. ' + o.no, PW - M, 22.5, { align: 'right' });
         y = 38;
       } else {
         set(10, 'bold', C.white); d.text(comp.name || 'Oni-El', M, 9);
-        set(8, 'normal', [210, 218, 224]); d.text('Llogaritja strukturore · ' + o.project, PW - M, 9, { align: 'right' });
+        set(8, 'normal', [210, 218, 224]); d.text((o.footTitle || 'Llogaritja strukturore') + ' · ' + o.project, PW - M, 9, { align: 'right' });
         y = 24;
       }
     };
@@ -279,15 +279,24 @@ window.OfferPDF = (function () {
       }
       if (b.table) {
         const t = b.table, xs = []; let x = M; t.widths.forEach(w => { xs.push(x); x += w; });
-        need(16);
-        d.setFillColor(...C.band); d.rect(M, y - 4.4, CW, 7, 'F');
-        set(7.6, 'bold', C.white); t.head.forEach((h, j) => d.text(h, t.right[j] ? xs[j] + t.widths[j] - 1.5 : xs[j] + 1.5, y, { align: t.right[j] ? 'right' : 'left' }));
-        y += 7;
-        t.rows.forEach((r, k) => {
-          need(6.4);
-          if (k % 2) { d.setFillColor(248, 250, 251); d.rect(M, y - 4.2, CW, 6.2, 'F'); }
-          set(8, 'normal'); r.forEach((v, j) => d.text(String(v), t.right[j] ? xs[j] + t.widths[j] - 1.5 : xs[j] + 1.5, y, { align: t.right[j] ? 'right' : 'left' }));
-          y += 6.2;
+        const thead = () => {
+          d.setFillColor(...C.band); d.rect(M, y - 4.4, CW, 7, 'F');
+          set(7.6, 'bold', C.white); t.head.forEach((h, j) => d.text(h, t.right[j] ? xs[j] + t.widths[j] - 1.5 : xs[j] + 1.5, y, { align: t.right[j] ? 'right' : 'left' }));
+          y += 7;
+        };
+        need(16); thead();
+        let z = 0;
+        t.rows.forEach(r => {
+          const o2 = Array.isArray(r) ? { c: r } : r, strong = o2.grp || o2.tot || o2.fin;
+          set(8, strong ? 'bold' : 'normal');
+          const cells = o2.c.map((v, j) => o2.grp && j === 0 ? [String(v).toUpperCase()] : d.splitTextToSize(String(v), t.widths[j] - 3));
+          const nl = Math.max(1, ...cells.map(c => c.length)), rh = 6.2 + (nl - 1) * 3.4;
+          if (y + rh > PH - 18) { d.addPage(); band(false); thead(); z = 0; }
+          if (o2.fin) d.setFillColor(...C.band); else if (o2.grp) d.setFillColor(...C.soft); else if (o2.tot) d.setFillColor(232, 237, 241); else d.setFillColor(248, 250, 251);
+          if (o2.fin || o2.grp || o2.tot || z % 2) d.rect(M, y - 4.2, CW, rh, 'F');
+          set(o2.fin ? 8.6 : 8, strong ? 'bold' : 'normal', o2.fin ? C.white : C.ink);
+          cells.forEach((ls, j) => d.text(ls, t.right[j] ? xs[j] + t.widths[j] - 1.5 : xs[j] + 1.5, y, { align: t.right[j] ? 'right' : 'left' }));
+          y += rh; z++;
         });
         if (t.note) { set(7.8, 'italic', C.dim); const ls = d.splitTextToSize(t.note, CW); need(ls.length * 3.6 + 2); d.text(ls, M, y + 1); y += ls.length * 3.6 + 3; }
         y += 2;

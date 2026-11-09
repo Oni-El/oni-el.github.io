@@ -728,6 +728,41 @@
       await saveFile('Llogaritja - ' + safeName(inp.client || inp.name) + '.pdf', new Blob([buf], { type: 'application/pdf' }));
     });
   }
+  function makeCostPDF() {
+    return busy('#bCostPdf', 'Duke përgatitur kostot…', async () => {
+      const c = cost, q = res.qty, P = pricesNow(), e0 = v => fmt(v, 0) + ' €';
+      const vat = settings.prices.vat || 20;
+      const B = [];
+      B.push({ h: 'Përmbledhja', kv: [
+        ['Çmimi i ofertës pa TVSH', e0(c.price) + ' · ' + fmt(c.perM2, 1) + ' €/m²'],
+        ['Çmimi me TVSH ' + fmt(vat, 0) + '%', e0(c.price * (1 + vat / 100))],
+        ['Kosto totale', e0(c.cost)],
+        ['Fitimi', e0(c.profit) + ' · ' + fmt(c.profit / c.price * 100, 1) + '% e çmimit (fitimi i vendosur ' + fmt(P.margin, 1) + '%)'],
+        ['Çeliku', fmt(q.steelTotal / 1000, 1) + ' t · ' + fmt(q.steelTotal / q.area.ground, 1) + ' kg/m²'],
+        ['Kosto e çelikut / kg', fmt(c.steelRate + P.stMont, 2) + ' € (material, prodhim, mbrojtje, montim)'],
+        ['Çmim efektiv / kg (gjithçka)', fmt(c.effKg, 2) + ' €'],
+        ['Transporti', c.trucks + ' kamionë']
+      ] });
+      const rows = []; let g = null;
+      const dec = u => u === 'kg' || u === 'copë' || u === 'udhëtim' || u === 'ditë' || u === 'shërbim' ? 0 : 1;
+      c.items.forEach(i => {
+        if (i.grp !== g) { g = i.grp; rows.push({ grp: true, c: [g, '', '', '', ''] }); }
+        rows.push([i.name, fmt(i.qty, dec(i.unit)), i.unit, fmt(i.rate, 2) + ' €', e0(i.v)]);
+      });
+      rows.push({ tot: true, c: ['Kostot direkte + projektimi', '', '', '', e0(c.direct + c.design)] });
+      rows.push(['Rezerva për të paparashikuara (' + fmt(P.contPct, 1) + '%)', '', '', '', e0(c.cont)]);
+      rows.push({ tot: true, c: ['Kosto totale', '', '', '', e0(c.cost)] });
+      rows.push(['Fitimi (' + fmt(P.margin, 1) + '%' + (P.round ? ', rrumbullakuar me ' + fmt(P.round, 0) + ' €' : '') + ')', '', '', '', e0(c.profit)]);
+      rows.push({ fin: true, c: ['Çmimi i ofertës pa TVSH · ' + fmt(c.perM2, 1) + ' €/m²', '', '', '', e0(c.price)] });
+      B.push({ h: 'Preventivi i detajuar', table: { head: ['Zëri', 'Sasia', 'Njësia', 'Çmimi njësi', 'Vlera'], widths: [86, 22, 18, 26, 28], right: [false, true, false, true, true], rows } });
+      const W = [['portal', 'Portalet'], ['purlin', 'Riglat e çatisë'], ['rail', 'Riglat e fasadës'], ['post', 'Kolonat ballore'], ['brace', 'Kontraventimet'], ['doors', 'Kornizat e dyerve'], ['mezz', 'Mezanina'], ['stairs', 'Shkallët'], ['conn', 'Lidhje dhe pllaka']].filter(([k]) => q.steel[k] > 0).map(([k, n]) => [n, fmt(q.steel[k], 0) + ' kg']);
+      W.push(['Totali', fmt(q.steelTotal, 0) + ' kg']);
+      B.push({ h: 'Pesha sipas elementeve', kv: W });
+      B.push({ list: ['Dokument i brendshëm: përmban kostot, çmimet njësi dhe fitimin. Nuk i dërgohet klientit; klienti merr vetëm ofertën.'] });
+      const buf = OfferPDF.report(Object.assign(docHead(), { blocks: B, docTitle: 'KOSTOT E BRENDSHME', docSub: 'Konfidenciale · ' + dstr(new Date()), footTitle: 'Kostot e brendshme' }));
+      await saveFile('Kostot e brendshme - ' + safeName(inp.client || inp.name) + '.pdf', new Blob([buf], { type: 'application/pdf' }));
+    });
+  }
   async function makePNG() {
     if (!View3D.ready) { toast('Modeli 3D nuk është gati.'); return; }
     ensure3D();
@@ -871,6 +906,7 @@
     $('#bPng').addEventListener('click', makePNG);
     $('#bDrawPdf').addEventListener('click', makeDrawPDF);
     $('#bCalcPdf').addEventListener('click', makeCalcPDF);
+    $('#bCostPdf').addEventListener('click', makeCostPDF);
     $('#bPrices').addEventListener('click', openPrices);
     $('#bPricesSave').addEventListener('click', savePrices);
     $('#bProjects').addEventListener('click', openProjects);
