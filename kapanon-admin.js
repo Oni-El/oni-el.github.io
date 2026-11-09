@@ -193,7 +193,7 @@
     // konfigurimi që klienti sheh nuk ndryshon; ruajmë vetëm shifrat për klientin
     const { data, error } = await client().rpc('admin_publish_offer', { p_id: current.id, p_offer: offer });
     if (error) { app.toast('Publikimi dështoi: ' + error.message); b.disabled = false; b.textContent = 'Publiko dhe njofto klientin'; return; }
-    const adm = {}; ['grade', 'colFam', 'rafFam', 'colSec', 'rafSec', 'purlinFam', 'purlinSec', 'purlinCont', 'purlinAuto', 'purlinSp', 'railFam', 'railSec', 'railAuto', 'railSp', 'postFam', 'postSec', 'postSp', 'limV', 'limH', 'connPct', 'coat', 'margin', 'bayMax', 'base', 'haunch', 'mGrid', 'mSlab', 'mBeamFam', 'mColFam', 'stairTread', 'q', 'soil', 'sk', 'vb', 'ag', 'terrain', 'gExtra', 'pay', 'excl', 'leadTime', 'validDays', 'showVat', 'showKg', 'showProfiles', 'currency'].forEach(k => { adm[k] = app.inp[k]; });
+    const adm = {}; ['grade', 'colFam', 'rafFam', 'colSec', 'rafSec', 'purlinFam', 'purlinSec', 'purlinCont', 'purlinAuto', 'purlinSp', 'railFam', 'railSec', 'railAuto', 'railSp', 'postFam', 'postSec', 'postSp', 'limV', 'limH', 'connPct', 'coat', 'margin', 'bayMax', 'base', 'haunch', 'mGrid', 'mSlab', 'mBeamFam', 'mColFam', 'stairTread', 'q', 'soil', 'sk', 'vb', 'ag', 'terrain', 'gExtra', 'doors', 'wins', 'pay', 'excl', 'leadTime', 'validDays', 'showVat', 'showKg', 'showProfiles', 'currency'].forEach(k => { adm[k] = app.inp[k]; });
     LSset('kap.req.' + current.id, { cfgSig: JSON.stringify(current.config), adm });
     current = Object.assign({}, current, data);
     app.toast('Oferta u publikua. Klienti mori email.');

@@ -15,12 +15,12 @@
   const CITIES = [['Elbasan', 0.8, 24, 'III', 0.25], ['Tiranë', 0.8, 25, 'III', 0.25], ['Durrës', 0.6, 27, 'II', 0.30], ['Shkodër', 1.0, 26, 'III', 0.28], ['Vlorë', 0.6, 28, 'II', 0.30], ['Fier', 0.6, 26, 'II', 0.27], ['Lushnjë', 0.6, 25, 'II', 0.25], ['Kavajë', 0.6, 26, 'II', 0.28], ['Lezhë', 0.8, 26, 'III', 0.28], ['Krujë / Fushë-Krujë', 0.8, 25, 'III', 0.27], ['Berat', 0.8, 24, 'III', 0.22], ['Korçë', 2.0, 25, 'III', 0.25], ['Pogradec', 1.8, 25, 'III', 0.27], ['Gjirokastër', 1.2, 25, 'III', 0.22], ['Sarandë', 0.6, 27, 'II', 0.30], ['Përmet', 1.2, 24, 'III', 0.24], ['Kukës', 2.0, 24, 'III', 0.18], ['Peshkopi', 2.0, 24, 'III', 0.22], ['Kosovë / tjetër', 1.2, 25, 'III', 0.25]];
   // vetëm këto fusha i zgjedh klienti; pjesa tjetër vendoset nga inxhinieri
   const CLIENT_KEYS = ['L', 'W', 'H', 'roof', 'slopePct', 'nSpans', 'sockel', 'roofType', 'roofT', 'roofCore', 'wallType', 'wallT', 'wallCore', 'skyPct', 'pv',
-    'mezz', 'mL', 'mW', 'mH', 'mUse', 'mDeck', 'stairs', 'stairShape', 'stairW', 'stairCount', 'stairRise', 'doorN', 'doorW', 'doorH', 'doorType', 'doorMotor', 'pDoorN', 'winA', 'partA', 'city'];
+    'mezz', 'mL', 'mW', 'mH', 'mUse', 'mDeck', 'stairs', 'stairShape', 'stairW', 'stairCount', 'stairRise', 'doors', 'wins', 'partA', 'city'];
   const DEF = {
     L: 40, W: 20, H: 6, roof: 'duo', slopePct: 10, nSpans: 1, sockel: 0,
     roofType: 'panel', roofT: 40, roofCore: 'PU', wallType: 'panel', wallT: 40, wallCore: 'PU', skyPct: 0, pv: false,
     mezz: false, mL: 12, mW: 10, mH: 3.5, mUse: 'B', mDeck: 'komp', stairs: 'none', stairShape: 'auto', stairW: 1.1, stairCount: 1, stairRise: 3,
-    doorN: 1, doorW: 4, doorH: 4.5, doorType: 'seks', doorMotor: true, pDoorN: 1, winA: 0, partA: 0, city: 'Elbasan'
+    doors: [{ side: 'front', type: 'seks', n: 1, w: 4, h: 4.5, motor: true }, { side: 'right', type: 'kemb', n: 1, w: 1, h: 2.2, motor: false }], wins: [], partA: 0, city: 'Elbasan'
   };
   const ENG_FIXED = { bayMax: 6, base: 'fixed', haunch: true, gExtra: 0.1, mQ: 5, mSlab: 12, mGrid: 5, mBeamFam: 'IPE', mColFam: 'SHS', stairTread: 'grile',
     grade: 'S275', colFam: 'both', rafFam: 'IPE', purlinFam: 'RHS', purlinCont: true, purlinAuto: true, purlinSp: 1.8, railFam: 'RHS', railAuto: true, railSp: 2,
@@ -69,13 +69,7 @@
       { k: 'stairRise', l: 'Lartësia që kapërcen shkalla', u: 'm', min: 0.5, max: 10, step: 0.1, show: () => inp.stairs !== 'none' && !inp.mezz, w2: 1 }
     ] },
     { id: 'open', n: 4, t: 'Dyer dhe dritare', f: [
-      { k: 'doorN', l: 'Dyer të mëdha', u: 'copë', min: 0, max: 12, step: 1 },
-      { k: 'doorType', l: 'Lloji', t: 'sel', o: [['seks', 'Seksionale'], ['roll', 'Rrotulluese']], show: () => inp.doorN > 0 },
-      { k: 'doorW', l: 'Gjerësia e derës', u: 'm', min: 1.5, max: 10, step: 0.1, show: () => inp.doorN > 0 },
-      { k: 'doorH', l: 'Lartësia e derës', u: 'm', min: 2, max: 8, step: 0.1, show: () => inp.doorN > 0 },
-      { k: 'doorMotor', l: 'Me motor elektrik', t: 'tog', w2: 1, show: () => inp.doorN > 0 },
-      { k: 'pDoorN', l: 'Dyer për njerëz', u: 'copë', min: 0, max: 10, step: 1 },
-      { k: 'winA', l: 'Dritare (sipërfaqe)', u: 'm²', min: 0, max: 400, step: 1 },
+      { k: '_open', t: 'open', w2: 1 },
       { k: 'partA', l: 'Mure ndarëse brenda', u: 'm²', min: 0, max: 3000, step: 5, w2: 1 }
     ] },
     { id: 'loc', n: 5, t: 'Vendndodhja', f: [
@@ -87,6 +81,7 @@
   function fieldHTML(f) {
     const id = 'c-' + f.k, cls = 'f' + (f.w2 ? ' w2' : '');
     const help = f.help ? `<small class="help">${f.help}</small>` : '';
+    if (f.t === 'open') return `<div class="f w2" data-k="${f.k}"><small class="help">Fasada ballore është ajo nga hyni; majtas dhe djathtas janë siç i shihni duke qëndruar përballë saj.</small><div id="openUI"></div></div>`;
     if (f.t === 'tog') return `<div class="${cls}" data-k="${f.k}"><label class="tog"><input type="checkbox" id="${id}"><span>${f.l}</span></label><small class="hint"></small></div>`;
     if (f.t === 'seg') return `<div class="${cls}" data-k="${f.k}"><span class="fl" id="${id}-l">${f.l}</span><div class="seg" role="group" aria-labelledby="${id}-l">${f.o.map(o => `<button type="button" data-v="${esc(o[0])}">${esc(o[1])}</button>`).join('')}</div><small class="hint"></small>${help}</div>`;
     if (f.t === 'sel') return `<div class="${cls}" data-k="${f.k}"><label for="${id}">${f.l}</label><div class="inp"><select id="${id}">${f.o.map(o => `<option value="${esc(o[0])}">${esc(o[1])}</option>`).join('')}</select></div><small class="hint"></small>${help}</div>`;
@@ -96,6 +91,7 @@
     $('#cfgSteps').innerHTML = SECTIONS.map(s => `<section class="step" id="st-${s.id}"><h3><span class="sn">${s.n}</span>${s.t}</h3><div class="fields">${s.f.map(fieldHTML).join('')}</div></section>`).join('');
     $$('#cfgSteps .f').forEach(el => {
       const f = FIELD[el.dataset.k];
+      if (f.t === 'open') return;
       if (f.t === 'seg') el.querySelectorAll('button').forEach(b => b.addEventListener('click', () => { if (editing) setVal(f.k, f.num ? +b.dataset.v : b.dataset.v); }));
       else if (f.t === 'tog') $('input', el).addEventListener('change', e => setVal(f.k, e.target.checked));
       else if (f.t === 'sel') $('select', el).addEventListener('change', e => setVal(f.k, f.num ? +e.target.value : e.target.value));
@@ -105,12 +101,19 @@
         i.addEventListener('change', e => { let v = parseFloat(String(e.target.value).replace(',', '.')); if (!isFinite(v)) v = inp[f.k]; v = Math.min(f.max, Math.max(f.min, v)); if (f.step >= 1) v = Math.round(v); e.target.value = v; setVal(f.k, v); });
       }
     });
+    openUI = window.OpenUI ? OpenUI.mount($('#openUI'), {
+      get: () => ({ doors: inp.doors || [], wins: inp.wins || [] }),
+      H: () => inp.H,
+      set: (doors, wins, typing) => { if (!editing) return; inp.doors = doors; inp.wins = wins; if (mode === 'new') LS.set('kap.client.draft', inp); else markChanged(); clearTimeout(setVal.t); setVal.t = setTimeout(compute, typing ? 400 : 120); }
+    }) : null;
     refreshForm();
   }
+  let openUI = null;
   function refreshForm() {
     SECTIONS.forEach(s => s.f.forEach(f => {
       const el = $(`#cfgSteps [data-k="${f.k}"]`); if (!el) return;
       el.hidden = f.show ? !f.show() : false;
+      if (f.t === 'open') { if (openUI) openUI.setEnabled(editing); return; }
       const v = inp[f.k];
       if (f.t === 'seg') el.querySelectorAll('button').forEach(b => { b.setAttribute('aria-pressed', String(String(v) === b.dataset.v)); b.disabled = !editing; });
       else if (f.t === 'tog') { const i = $('input', el); i.checked = !!v; i.disabled = !editing; }
@@ -144,7 +147,10 @@
     parts.push(i.roofType === 'panel' ? `panel ${i.roofT}/${i.wallType === 'panel' ? i.wallT : 0} mm` : 'llamarinë');
     if (i.mezz) parts.push(`mezaninë ${fmt(Math.min(i.mL, i.L) * Math.min(i.mW, i.W), 0)} m² në +${f2(i.mH)}`);
     if (i.stairs !== 'none') parts.push((i.stairs === 'ext' ? 'shkallë e jashtme' : 'shkallë e brendshme'));
-    if (i.doorN) parts.push(`${i.doorN} dyer ${f1(i.doorW)}×${f1(i.doorH)}`);
+    const R = E.openingRows(i), ind = R.doors.filter(d => d.type !== 'kemb'), nd = ind.reduce((a, d) => a + d.n, 0), np = R.doors.filter(d => d.type === 'kemb').reduce((a, d) => a + d.n, 0), nw = R.wins.reduce((a, w) => a + w.n, 0);
+    if (nd) { const one = ind.every(d => d.w === ind[0].w && d.h === ind[0].h), fs = new Set(ind.map(d => d.side)).size; parts.push(`${nd} dyer${one ? ' ' + f1(ind[0].w) + '×' + f1(ind[0].h) : ''}${fs > 1 ? ' në ' + fs + ' fasada' : ''}`); }
+    if (np) parts.push(`${np} këmbësore`);
+    if (nw) parts.push(`${nw} dritare në ${R.wins.length} ${R.wins.length > 1 ? 'rreshta' : 'rresht'}`);
     if (i.pv) parts.push('me panele diellore');
     parts.push(i.city);
     return { title: `Kapanon ${f1(i.L)} × ${f1(i.W)} m`, text: parts.join(', '), area: i.L * i.W, mezzArea: i.mezz ? Math.min(i.mL, i.L) * Math.min(i.mW, i.W) : 0, L: i.L, W: i.W, H: i.H };
@@ -169,7 +175,7 @@
     if (!res || !dirtyDraw) return;
     const m = { company: 'ONI-EL', project: summary(inp).title, watermark: wmText() };
     $('#drPlan').innerHTML = Draw.plan(res, engIn, PAL, m);
-    $('#drFront').innerHTML = Draw.front(res, engIn, PAL, m);
+    $('#drFront').innerHTML = ['front', 'right', 'back', 'left'].map(sd => Draw.facade(res, engIn, PAL, m, sd)).join('<div style="height:10px"></div>');
     dirtyDraw = false;
   }
 
@@ -215,7 +221,7 @@
     const { data, error } = await c.rpc('get_request', { p_token: tok });
     if (error || !data) { $('#portal').innerHTML = `<div class="card"><h2>Linku nuk u gjet</h2><p class="muted">Kontrolloni linkun në email ose na kontaktoni.</p></div>`; return; }
     reqData = data;
-    inp = Object.assign(clone(DEF), data.config || {});
+    inp = Object.assign(clone(DEF), E.migrateOpenings(data.config || {}));
     editing = false; changed = false;
     renderPortal(flash);
     refreshForm(); compute();
@@ -299,7 +305,7 @@
     const k = new URLSearchParams(location.search).get('k');
     if (k) { openPortal(k); return; }
     const draft = LS.get('kap.client.draft');
-    if (draft) inp = Object.assign(clone(DEF), draft);
+    if (draft) inp = Object.assign(clone(DEF), E.migrateOpenings(draft));
     const mine = LS.get('kap.client.mine') || [];
     if (mine.length) { const a = $('#myReq'); a.hidden = false; a.innerHTML = 'Keni dërguar më parë kërkesën <a href="?k=' + encodeURIComponent(mine[0].token) + '">' + esc(mine[0].code) + '</a>. Hapeni për të parë statusin.'; }
     refreshForm(); compute();

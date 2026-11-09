@@ -815,6 +815,8 @@
     if (out.post && out.post.u > 1) out.warn.push('Kolonat e fasadës ballore nuk kalojnë me ' + out.post.sec.name + '. Zvogëlo interaksin e tyre.');
     if (out.brace.roofRod.fail || out.brace.wallRod.fail) out.warn.push('Kontraventimet kërkojnë më shumë se ' + out.brace.nbb + ' interakse të lidhura ose profile në vend të shufrave.');
     if (inp.mezz && inp.H - inp.mH < 2.2) out.warn.push('Mbi mezaninë mbeten vetëm ' + (inp.H - inp.mH).toFixed(2).replace('.', ',') + ' m lartësi e lirë.');
+    out.open = layoutOpenings(inp, out);
+    out.open.warn.forEach(w => out.warn.push(w));
     out.qty = quantities(inp, out, { slopeLen, cosA, rafLen, nCol, sockel });
     out.ms = Date.now() - t0;
     return out;
@@ -901,6 +903,137 @@
     return { rise, n, riser, going, shape, flights, w, st, kg, treadArea: (treadArea + landArea) * (inp.stairCount || 1), rail: rail * (inp.stairCount || 1), ext: inp.stairs === 'ext', count: inp.stairCount || 1, incl, runMax, landArea };
   }
 
+  /* ---------------- Dyert dhe dritaret sipas fasadave ---------------- */
+  // fasadat: front = timpani në z = 0, back = timpani në z = L, left = muri në x = W, right = muri në x = 0
+  // (majtas/djathtas siç i sheh dikush që qëndron përballë fasadës ballore)
+  const SIDES = ['front', 'back', 'left', 'right'];
+  const SIDE_NAME = { front: 'Fasada ballore', back: 'Fasada e pasme', left: 'Fasada anësore majtas', right: 'Fasada anësore djathtas' };
+  const DOOR_TYPES = { seks: 'seksionale', roll: 'rrotulluese', kemb: 'këmbësore' };
+  const LEGACY_OPEN = ['doorN', 'doorW', 'doorH', 'doorType', 'doorMotor', 'pDoorN', 'winA'];
+  const c2 = v => (Math.round(v * 100) / 100).toFixed(2).replace('.', ',');
+  const c1 = v => (Math.round(v * 10) / 10).toFixed(1).replace('.', ',');
+  // konfigurimet e vjetra (doorN, doorW, ..., winA) → rreshta sipas fasadave, me të njëjtin vendosje si më parë
+  function migrateOpenings(cfg) {
+    if (!cfg || typeof cfg !== 'object') return cfg;
+    const o = Object.assign({}, cfg);
+    if (!Array.isArray(o.doors) && LEGACY_OPEN.some(k => k in o)) {
+      const n = Math.max(0, Math.round(+o.doorN || 0)), w = +o.doorW || 4, h = +o.doorH || 4.5, W = +o.W || 20;
+      const type = o.doorType === 'roll' ? 'roll' : 'seks', motor = o.doorMotor !== false;
+      const nf = Math.min(n, Math.max(1, Math.floor(W / (w + 1.5))));
+      o.doors = [];
+      if (nf > 0) o.doors.push({ side: 'front', type, n: nf, w, h, motor });
+      if (n - nf > 0) o.doors.push({ side: 'left', type, n: n - nf, w, h, motor });
+      if (+o.pDoorN > 0) o.doors.push({ side: 'right', type: 'kemb', n: Math.round(+o.pDoorN), w: 1, h: 2.2, motor: false });
+      const wa = +o.winA || 0;
+      o.wins = [];
+      if (wa > 0) {
+        const per = wa / 2, k = Math.max(1, Math.round(per / (2.4 * 1.2))), wl = Math.round(Math.min(2.4, per / k / 1.2) * 100) / 100;
+        ['left', 'right'].forEach(sd => o.wins.push({ side: sd, n: k, w: wl, h: 1.2, sill: 2.6 }));
+      }
+    }
+    if (Array.isArray(o.doors) && !Array.isArray(o.wins)) o.wins = [];
+    LEGACY_OPEN.forEach(k => { delete o[k]; });
+    return o;
+  }
+  function openingRows(inp) {
+    const src = Array.isArray(inp.doors) || Array.isArray(inp.wins) ? inp : migrateOpenings(inp);
+    const num = (v, d) => { v = +v; return isFinite(v) && v > 0 ? v : d; };
+    const doors = (src.doors || []).filter(d => d && SIDES.includes(d.side) && +d.n >= 1).map(d => {
+      const type = DOOR_TYPES[d.type] ? d.type : 'seks', k = type === 'kemb';
+      return { side: d.side, type, n: Math.min(50, Math.round(+d.n)), w: num(d.w, k ? 1 : 4), h: num(d.h, k ? 2.2 : 4.5), motor: !k && !!d.motor };
+    });
+    const wins = (src.wins || []).filter(w => w && SIDES.includes(w.side) && +w.n >= 1).map(w => ({
+      side: w.side, n: Math.min(200, Math.round(+w.n)), w: num(w.w, 2), h: num(w.h, 1.2), sill: isFinite(+w.sill) && w.sill !== '' && w.sill != null ? Math.max(0, +w.sill) : 2.4
+    }));
+    return { doors, wins };
+  }
+  // vendos hapjet në çdo fasadë: dyert industriale në interakse pa kontraventime (anash) ose të shpërndara (timpan),
+  // dyert këmbësore dhe dritaret në hapësirat e lira; c = qendra në koordinatën e murit (x për timpanet, z për anët)
+  function layoutOpenings(inp, out) {
+    const { doors, wins } = openingRows(inp);
+    const yR = out.frame.fr.yRoof, W = inp.W, L = inp.L, nb = out.nBays, sb = out.bay;
+    const braced = new Set([0, nb - 1]);
+    if (out.brace.nbb >= 3) braced.add(Math.floor((nb - 1) / 2));
+    if (out.brace.nbb >= 4) braced.add(Math.min(nb - 2, Math.floor((nb - 1) / 2) + 1));
+    const lay = { front: [], back: [], left: [], right: [] }, warn = [];
+    const gable = sd => sd === 'front' || sd === 'back';
+    const topAt = (sd, c, w) => gable(sd) ? Math.min(yR(Math.max(0, c - w / 2)), yR(Math.min(W, c + w / 2))) : yR(sd === 'left' ? W : 0);
+    SIDES.forEach(sd => {
+      const Lw = gable(sd) ? W : L, items = lay[sd];
+      const list = [];
+      doors.filter(d => d.side === sd && d.type !== 'kemb').forEach(d => { for (let i = 0; i < d.n; i++) list.push(d); });
+      const N = list.length;
+      let cs = [];
+      if (N && !gable(sd) && N <= nb) {
+        const free = []; for (let b = 0; b < nb; b++) if (!braced.has(b)) free.push(b);
+        const pool = free.length >= N ? free : Array.from({ length: nb }, (_, b) => b);
+        cs = list.map((_, i) => (pool[Math.min(pool.length - 1, Math.floor((i + 0.5) * pool.length / N))] + 0.5) * sb);
+      } else cs = list.map((_, i) => Lw * (i + 1) / (N + 1));
+      list.forEach((d, i) => items.push(Object.assign({ kind: 'door' }, d, { c: cs[i], y0: 0, y1: d.h })));
+      const place = (w, y0, y1, n) => {
+        const g = 0.4, m = 0.5;
+        let iv = [[m, Lw - m]];
+        items.filter(it => it.y0 < y1 + 0.15 && it.y1 > y0 - 0.15).forEach(it => {
+          const a = it.c - it.w / 2 - g, b = it.c + it.w / 2 + g;
+          iv = iv.reduce((acc, [p, q]) => { if (b <= p || a >= q) acc.push([p, q]); else { if (a - p > 0.05) acc.push([p, a]); if (q - b > 0.05) acc.push([b, q]); } return acc; }, []);
+        });
+        const fit = iv.filter(([p, q]) => q - p >= w);
+        const cap = fit.map(([p, q]) => Math.floor((q - p + g) / (w + g)));
+        const tot = fit.reduce((a, [p, q]) => a + q - p, 0);
+        const al = fit.map(([p, q], i) => Math.min(cap[i], Math.floor(n * (q - p) / (tot || 1))));
+        let rest = n - al.reduce((a, b) => a + b, 0);
+        while (rest > 0) {
+          let bi = -1, bv = -1;
+          fit.forEach(([p, q], i) => { if (al[i] < cap[i]) { const v = (q - p) / (al[i] + 1); if (v > bv) { bv = v; bi = i; } } });
+          if (bi < 0) break; al[bi]++; rest--;
+        }
+        const out2 = [];
+        fit.forEach(([p, q], i) => { for (let j = 0; j < al[i]; j++) out2.push(p + (q - p) * (j + 0.5) / al[i]); });
+        return { cs: out2.sort((a, b) => a - b), miss: rest };
+      };
+      doors.filter(d => d.side === sd && d.type === 'kemb').forEach(d => {
+        const r = place(d.w, 0, d.h, d.n);
+        r.cs.forEach(c => items.push(Object.assign({ kind: 'door' }, d, { c, y0: 0, y1: d.h })));
+        if (r.miss) warn.push(SIDE_NAME[sd] + ': nuk ka vend për ' + r.miss + ' derë këmbësore.');
+      });
+      wins.filter(w => w.side === sd).forEach(w => {
+        const r = place(w.w, w.sill, w.sill + w.h, w.n);
+        r.cs.forEach(c => items.push(Object.assign({ kind: 'win' }, w, { c, y0: w.sill, y1: w.sill + w.h })));
+        if (r.miss) warn.push(SIDE_NAME[sd] + ': nuk ka vend për ' + r.miss + ' nga ' + w.n + ' dritaret ' + c2(w.w) + ' × ' + c2(w.h) + ' m.');
+      });
+      let tooHigh = false, tooWide = false;
+      items.forEach(it => {
+        const lim = topAt(sd, it.c, it.w) - (it.kind === 'win' ? 0.2 : 0.3);
+        if (it.y1 > lim + 1e-6) tooHigh = it;
+        if (it.kind === 'door' && it.type !== 'kemb' && !gable(sd) && it.w > sb - 0.35) tooWide = it;
+      });
+      if (tooHigh) warn.push(SIDE_NAME[sd] + ': ' + (tooHigh.kind === 'win' ? 'dritarja' : 'dera') + ' ' + c2(tooHigh.w) + ' × ' + c2(tooHigh.h) + ' m del mbi strehë (lartësia e lirë ' + c2(topAt(sd, tooHigh.c, tooHigh.w) - 0.3) + ' m).');
+      if (tooWide) warn.push(SIDE_NAME[sd] + ': dera ' + c2(tooWide.w) + ' m është më e gjerë se interaksi i portaleve (' + c2(sb) + ' m) dhe kërkon trar mbi derë.');
+      items.sort((a, b) => a.c - b.c);
+    });
+    // numërimi: D1… dyer industriale, K1… këmbësore, sipas renditjes ballore → djathtas → e pasme → majtas
+    let nd = 0, nk = 0;
+    ['front', 'right', 'back', 'left'].forEach(sd => lay[sd].filter(it => it.kind === 'door').forEach(it => { it.tag = it.type === 'kemb' ? 'K' + (++nk) : 'D' + (++nd); }));
+    return { rows: { doors, wins }, lay, warn };
+  }
+  // përshkrim i shkurtër (oferta, përmbledhja e kërkesës)
+  function describeOpenings(inp) {
+    const { doors, wins } = openingRows(inp), out = [];
+    const ind = doors.filter(d => d.type !== 'kemb'), ped = doors.filter(d => d.type === 'kemb');
+    const grp = {};
+    ind.forEach(d => { const k = d.type + '|' + d.w + '|' + d.h + '|' + (d.motor ? 1 : 0); (grp[k] = grp[k] || { d, n: 0, sides: [] }).n += d.n; grp[k].sides.push(SIDE_NAME[d.side].replace('Fasada ', '')); });
+    Object.values(grp).forEach(g => out.push(g.n + ' ' + (g.n > 1 ? 'dyer industriale ' + DOOR_TYPES[g.d.type] : 'derë industriale ' + DOOR_TYPES[g.d.type]) + ' ' + c1(g.d.w) + ' × ' + c1(g.d.h) + ' m' + (g.d.motor ? ' me motor' : '') + ' (' + Array.from(new Set(g.sides)).join(', ') + ')'));
+    const np = ped.reduce((a, d) => a + d.n, 0);
+    if (np) out.push(np + ' ' + (np > 1 ? 'dyer këmbësore' : 'derë këmbësore'));
+    const nw = wins.reduce((a, w) => a + w.n, 0);
+    if (nw) {
+      const aw = wins.reduce((a, w) => a + w.n * w.w * w.h, 0);
+      const rows = wins.map(w => w.n + ' × ' + c1(w.w) + '×' + c1(w.h) + ' m në ' + SIDE_NAME[w.side].replace('Fasada ', '') + ', parapeti ' + c2(w.sill) + ' m');
+      out.push(nw + ' dritare (' + c1(aw) + ' m²): ' + rows.join('; '));
+    }
+    return out;
+  }
+
   /* ---------------- Sasitë ---------------- */
   function quantities(inp, out, g) {
     const fr = out.frame.fr, nF = out.nFrames;
@@ -915,7 +1048,9 @@
     q.steel.post = out.post ? 2 * out.posts.reduce((a, p) => a + p.h, 0) * out.post.sec.kg : 0;
     const b = out.brace;
     q.steel.brace = b.roofBrLen * b.roofRod.kg + b.wallBrLen * b.wallRod.kg + b.strutLen * b.strut.sec.kg;
-    const doorFrame = inp.doorN * (2 * inp.doorH + inp.doorW) * 18.7 + inp.pDoorN * (2 * 2.2 + 1.0) * 8.0;
+    const OR = openingRows(inp), sumO = (a, f) => a.reduce((t, d) => t + f(d), 0);
+    const indD = OR.doors.filter(d => d.type !== 'kemb'), pedD = OR.doors.filter(d => d.type === 'kemb');
+    const doorFrame = sumO(indD, d => d.n * (2 * d.h + d.w)) * 18.7 + sumO(pedD, d => d.n * (2 * d.h + d.w)) * 8.0;
     q.steel.doors = doorFrame;
     if (out.mezz) {
       const m = out.mezz;
@@ -938,14 +1073,15 @@
     q.steelTotal = base + q.steel.conn;
     q.steelExt = out.stairs && out.stairs.ext ? out.stairs.kg : 0;
     // sipërfaqet
-    const doorA = inp.doorN * inp.doorW * inp.doorH + inp.pDoorN * 1.0 * 2.2 + (inp.winA || 0);
+    q.area.doorInd = sumO(indD, d => d.n * d.w * d.h);
+    q.area.pDoor = sumO(pedD, d => d.n * d.w * d.h);
+    q.area.win = sumO(OR.wins, w => w.n * w.w * w.h);
+    const doorA = q.area.doorInd + q.area.pDoor + q.area.win;
     q.area.roof = inp.L * (inp.roof === 'duo' ? 2 * inp.nSpans * g.slopeLen : g.slopeLen);
     q.area.sky = q.area.roof * (inp.skyPct || 0) / 100;
     const sideH = inp.roof === 'duo' ? 2 * inp.H : (inp.H + inp.H + inp.slope * inp.W);
     q.area.wallGross = inp.L * sideH + 2 * out.gableArea;
     q.area.wall = Math.max(0, inp.L * (sideH - 2 * g.sockel) + 2 * (out.gableArea - inp.W * g.sockel) - doorA);
-    q.area.doorInd = inp.doorN * inp.doorW * inp.doorH;
-    q.area.win = inp.winA || 0;
     q.area.part = inp.partA || 0;
     q.area.ground = inp.L * inp.W;
     q.area.total = q.area.ground + q.area.mezz;
@@ -955,8 +1091,8 @@
     q.count.down = nG * Math.max(2, Math.ceil(inp.L / 15) + 1);
     q.len.down = q.count.down * inp.H;
     const ridges = inp.roof === 'duo' ? inp.nSpans : 1;
-    q.len.flash = ridges * inp.L + 2 * 2 * (inp.roof === 'duo' ? inp.nSpans * g.slopeLen : g.slopeLen) + 4 * inp.H + 2 * (inp.L + inp.W) + inp.doorN * (2 * inp.doorH + inp.doorW) + inp.pDoorN * 5.4;
-    q.count.doorInd = inp.doorN; q.count.pDoor = inp.pDoorN;
+    q.len.flash = ridges * inp.L + 2 * 2 * (inp.roof === 'duo' ? inp.nSpans * g.slopeLen : g.slopeLen) + 4 * inp.H + 2 * (inp.L + inp.W) + sumO(OR.doors, d => d.n * (2 * d.h + d.w));
+    q.count.doorInd = sumO(indD, d => d.n); q.count.pDoor = sumO(pedD, d => d.n); q.count.motor = sumO(indD.filter(d => d.motor), d => d.n); q.count.win = sumO(OR.wins, w => w.n);
     q.count.cols = (out.nFrames) * g.nCol + 2 * out.posts.length + (out.mezz ? out.mezz.nCols : 0);
     return q;
   }
@@ -994,11 +1130,11 @@
     add('Llamarina', 'Ulluqe', q.len.gutter, 'm', P.gutter, 'Ulluqe dhe llamarina');
     add('Llamarina', 'Gypa shkarkimi', q.len.down, 'm', P.down, 'Ulluqe dhe llamarina');
     add('Llamarina', 'Llamarina mbuluese (kulm, qoshe, buzë)', q.len.flash, 'm', P.flash, 'Ulluqe dhe llamarina');
-    if (inp.doorN) {
-      add('Dyer', 'Dyer industriale ' + (inp.doorType === 'seks' ? 'seksionale' : 'rrotulluese') + ' ' + String(inp.doorW).replace('.', ',') + ' × ' + String(inp.doorH).replace('.', ',') + ' m', q.area.doorInd, 'm²', inp.doorType === 'seks' ? P.doorSek : P.doorRoll, 'Dyer dhe dritare');
-      if (inp.doorMotor) add('Dyer', 'Motor elektrik për dyert', inp.doorN, 'copë', P.motor, 'Dyer dhe dritare');
-    }
-    if (inp.pDoorN) add('Dyer', 'Dyer këmbësore metalike', inp.pDoorN, 'copë', P.pDoor, 'Dyer dhe dritare');
+    const dg = {};
+    openingRows(inp).doors.filter(d => d.type !== 'kemb').forEach(d => { const k = d.type + '|' + d.w + '|' + d.h; (dg[k] = dg[k] || { d, n: 0 }).n += d.n; });
+    Object.values(dg).forEach(g => add('Dyer', 'Dyer industriale ' + DOOR_TYPES[g.d.type] + ' ' + c1(g.d.w) + ' × ' + c1(g.d.h) + ' m (' + g.n + ' copë)', g.n * g.d.w * g.d.h, 'm²', g.d.type === 'seks' ? P.doorSek : P.doorRoll, 'Dyer dhe dritare'));
+    if (q.count.motor) add('Dyer', 'Motor elektrik për dyert', q.count.motor, 'copë', P.motor, 'Dyer dhe dritare');
+    if (q.count.pDoor) add('Dyer', 'Dyer këmbësore metalike', q.count.pDoor, 'copë', P.pDoor, 'Dyer dhe dritare');
     if (q.area.win) add('Dyer', 'Dritare', q.area.win, 'm²', P.win, 'Dyer dhe dritare');
     if (q.area.part) add('Ndarje', 'Mure ndarëse me panel sandwich', q.area.part, 'm²', (P.wallPanel[inp.wallT] || 24) + P.wallMont + 4, 'Ndarjet e brendshme');
     if (out.mezz) {
@@ -1045,5 +1181,5 @@
     return { items, direct, design, cont, cost, price, profit: price - cost, groups, perM2: price / area, perM2Total: price / q.area.total, effKg: price / q.steelTotal, costKg: cost / q.steelTotal, steelRate, trucks: trSteel + trPan };
   }
 
-  root.KapEngine = { DEFAULT_PRICES, SEC, ALL, famList, design, costs, checkI, checkRHS, qpeak, climate, USES, DECKS, buildFrame, analyseFrame, interp, mkRHS, forcesAt, cladKg, assemble, runCase, kLocal };
+  root.KapEngine = { DEFAULT_PRICES, SEC, ALL, famList, design, costs, checkI, checkRHS, qpeak, climate, USES, DECKS, buildFrame, analyseFrame, interp, mkRHS, forcesAt, cladKg, assemble, runCase, kLocal, SIDES, SIDE_NAME, DOOR_TYPES, migrateOpenings, openingRows, layoutOpenings, describeOpenings };
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -36,7 +36,7 @@
     roofType: 'panel', roofT: 40, roofCore: 'PU', wallType: 'panel', wallT: 40, wallCore: 'PU', skyPct: 0, pv: false, gExtra: 0.10,
     mezz: false, mL: 12, mW: 10, mH: 3.5, mUse: 'B', mQ: 5, mDeck: 'komp', mSlab: 12, mG2: 1.0, mGrid: 5, mBeamFam: 'IPE', mColFam: 'SHS',
     stairs: 'none', stairShape: 'auto', stairW: 1.1, stairTread: 'grile', stairCount: 1, stairRise: 3.0,
-    doorN: 1, doorW: 4, doorH: 4.5, doorType: 'seks', doorMotor: true, pDoorN: 1, winA: 0, partA: 0,
+    doors: [{ side: 'front', type: 'seks', n: 1, w: 4, h: 4.5, motor: true }, { side: 'right', type: 'kemb', n: 1, w: 1, h: 2.2, motor: false }], wins: [], partA: 0,
     sk: 0.8, vb: 24, terrain: 'III', ag: 0.25, soil: 'C', q: 1.5,
     grade: 'S275', colFam: 'both', rafFam: 'IPE', colSec: '', rafSec: '', purlinFam: 'RHS', purlinSec: '', purlinCont: true, purlinAuto: true, purlinSp: 1.8,
     railFam: 'RHS', railSec: '', railAuto: true, railSp: 2.0, postFam: 'IPE', postSec: '', postSp: 6, limV: 200, limH: 150, connPct: 10, coat: 'paint',
@@ -138,14 +138,8 @@
       { k: 'stairCount', l: 'Numri i shkallëve', min: 1, max: 4, step: 1, show: () => inp.stairs !== 'none' },
       { k: 'stairRise', l: 'Lartësia që kapërcen', u: 'm', min: 0.5, max: 10, step: 0.05, show: () => inp.stairs !== 'none' && !inp.mezz }
     ] },
-    { id: 'open', t: 'Dyer, dritare, ndarje', ss: () => inp.doorN + ' dyer · ' + inp.pDoorN + ' këmbësore', f: [
-      { k: 'doorN', l: 'Dyer industriale', u: 'copë', min: 0, max: 20, step: 1 },
-      { k: 'doorType', l: 'Lloji', t: 'sel', o: [['seks', 'Seksionale'], ['roll', 'Rrotulluese']], show: () => inp.doorN > 0 },
-      { k: 'doorW', l: 'Gjerësia e derës', u: 'm', min: 1, max: 12, step: 0.1, show: () => inp.doorN > 0 },
-      { k: 'doorH', l: 'Lartësia e derës', u: 'm', min: 2, max: 10, step: 0.1, show: () => inp.doorN > 0 },
-      { k: 'doorMotor', l: 'Me motor elektrik', t: 'tog', w2: 1, show: () => inp.doorN > 0 },
-      { k: 'pDoorN', l: 'Dyer këmbësore', u: 'copë', min: 0, max: 20, step: 1 },
-      { k: 'winA', l: 'Dritare', u: 'm²', min: 0, max: 500, step: 1 },
+    { id: 'open', t: 'Dyer, dritare, ndarje', ss: () => openSS(), f: [
+      { k: '_open', t: 'open', w2: 1 },
       { k: 'partA', l: 'Mure ndarëse me panel', u: 'm²', min: 0, max: 5000, step: 5, w2: 1 }
     ] },
     { id: 'load', t: 'Vendndodhja dhe ngarkesat', ss: () => inp.city.split(' ')[0] + ' · sk ' + f2(inp.sk), f: [
@@ -197,6 +191,19 @@
     ] }
   ];
   const FIELD = {}; SECTIONS.forEach(s => s.f.forEach(f => { FIELD[f.k] = f; f.sec = s.id; }));
+  function openSS() {
+    const R = E.openingRows(inp), nd = R.doors.filter(d => d.type !== 'kemb').reduce((a, d) => a + d.n, 0), np = R.doors.filter(d => d.type === 'kemb').reduce((a, d) => a + d.n, 0), nw = R.wins.reduce((a, w) => a + w.n, 0);
+    return nd + ' dyer · ' + np + ' këmb. · ' + nw + ' dritare';
+  }
+  let openUI = null;
+  function mountOpenUI() {
+    const el = $('#openUI'); if (!el || !window.OpenUI) return;
+    openUI = OpenUI.mount(el, {
+      get: () => ({ doors: inp.doors || [], wins: inp.wins || [] }),
+      H: () => inp.H,
+      set: (doors, wins, typing) => { inp.doors = doors; inp.wins = wins; saveDraft(); const ss = $('#ss-open'); if (ss) ss.textContent = openSS(); schedule(typing ? 450 : 120); }
+    });
+  }
 
   /* ---------------- formulari ---------------- */
   function fieldVal(f) {
@@ -209,11 +216,13 @@
     const side = $('#side');
     side.innerHTML = SECTIONS.map(s => `<details class="sec${s.money ? ' money' : ''}" id="sec-${s.id}"${s.open ? ' open' : ''}><summary><span class="st">${s.t}</span><span class="ss" id="ss-${s.id}"></span></summary><div class="fields">${s.f.map(fieldHTML).join('')}</div></details>`).join('');
     bindForm();
+    mountOpenUI();
     refreshForm();
   }
   function fieldHTML(f) {
     const id = 'f-' + f.k, cls = 'f' + (f.w2 ? ' w2' : '') + (f.cls ? ' ' + f.cls : '');
     if (f.t === 'note') return `<div class="sub-note" data-k="${f.k}" id="${id}"></div>`;
+    if (f.t === 'open') return `<div class="f w2 fopen" data-k="${f.k}"><div id="openUI"></div></div>`;
     if (f.t === 'tog') return `<div class="${cls}" data-k="${f.k}"><label class="tog"><input type="checkbox" id="${id}"><span>${f.l}</span></label><small class="hint"></small></div>`;
     if (f.t === 'seg') return `<div class="${cls}" data-k="${f.k}"><span class="fl" id="${id}-l">${f.l}</span><div class="seg" role="group" aria-labelledby="${id}-l">${f.o.map(o => `<button type="button" data-v="${esc(o[0])}">${esc(o[1])}</button>`).join('')}</div><small class="hint"></small></div>`;
     if (f.t === 'sel') { const opts = typeof f.o === 'function' ? f.o() : f.o; return `<div class="${cls}" data-k="${f.k}"><label for="${id}">${f.l}</label><div class="inp"><select id="${id}">${opts.map(o => `<option value="${esc(o[0])}">${esc(o[1])}</option>`).join('')}</select></div><small class="hint"></small></div>`; }
@@ -228,7 +237,7 @@
       else if (f.t === 'tog') $('input', el).addEventListener('change', e => setVal(f.k, e.target.checked));
       else if (f.t === 'sel') $('select', el).addEventListener('change', e => setVal(f.k, f.num ? +e.target.value : e.target.value));
       else if (f.t === 'area' || f.t === 'text' || f.t === 'date') { const i = $('textarea, input', el); i.addEventListener('input', e => setVal(f.k, e.target.value, true)); }
-      else if (f.t !== 'note') {
+      else if (f.t !== 'note' && f.t !== 'open') {
         const i = $('input', el);
         i.addEventListener('input', e => { const v = parseFloat(String(e.target.value).replace(',', '.')); if (isFinite(v)) setVal(f.k, v, true); });
         i.addEventListener('change', e => {
@@ -248,6 +257,7 @@
         const el = $(`#side [data-k="${f.k}"]`); if (!el) return;
         el.hidden = f.show ? !f.show() : false;
         if (f.t === 'note') { el.innerHTML = f.html(); return; }
+        if (f.t === 'open') { if (openUI) openUI.refresh(); return; }
         const v = fieldVal(f);
         if (f.t === 'seg') el.querySelectorAll('.seg button').forEach(b => b.setAttribute('aria-pressed', String(String(v) === b.dataset.v)));
         else if (f.t === 'tog') $('input', el).checked = !!v;
@@ -351,7 +361,8 @@
   function meta() { return { company: (settings.company.name || 'Oni-El').toUpperCase(), project: inp.name }; }
   function renderDrawings() {
     const p = screenPal(), m = meta();
-    $('#drawings').innerHTML = [Draw.section(res, engIn, p, m), Draw.plan(res, engIn, p, m), Draw.side(res, engIn, p, m), Draw.front(res, engIn, p, m)].map(s => `<div class="card">${s}</div>`).join('');
+    const fs = ['front', 'right', 'back', 'left'].map(sd => Draw.facade(res, engIn, p, m, sd));
+    $('#drawings').innerHTML = [Draw.section(res, engIn, p, m), Draw.plan(res, engIn, p, m)].concat(fs).map(s => `<div class="card">${s}</div>`).join('');
   }
 
   /* ---------------- raporti strukturor ---------------- */
@@ -489,10 +500,7 @@
     desc.push(['Fasadat', (inp.wallType === 'panel' ? `Panel sandwich ${inp.wallT} mm me bërthamë ${inp.wallCore === 'MW' ? 'lesh guri' : 'PIR/PU'}` : 'Llamarinë grekë e parangjyrosur') + (inp.sockel > 0 ? ` mbi mur betoni ${f2(inp.sockel)} m (muri nuk përfshihet).` : '.')]);
     if (r.mezz) { const m = r.mezz; desc.push(['Mezanina', `${f2(m.L)} × ${f2(m.W)} m (${fmt(m.area, 0)} m²) në kuotën +${f2(m.Hm)} m; përdorimi: ${m.use.name}, ${fmt(m.Q, 1)} kN/m². Soleta: ${m.deck.name.toLowerCase()}` + (sp ? `; trarë ${m.sec1.sec.name} / ${m.sec2.sec.name}, kolona ${m.col.sec.name}` : '') + '; kontraventime kryq' + (q.len.mezzRail ? ', parmak në buzët e lira.' : '.')]); }
     if (r.stairs) { const s = r.stairs; desc.push(['Shkallët', `${s.count > 1 ? s.count + ' shkallë' : 'Shkallë'} ${s.ext ? 'e jashtme e zinkuar' : 'e brendshme'} ${s.shape === 'U' ? 'me sheshpushim' : 'e drejtë'}, gjerësia ${f2(s.w)} m, ${s.n} ngritje × ${fmt(s.riser * 100, 1)} cm, shkelëse ${inp.stairTread === 'grile' ? 'grilë' : 'llamarinë me lot'}, me parmak.`]); }
-    const op = [];
-    if (inp.doorN) op.push(`${inp.doorN} ${inp.doorN > 1 ? 'dyer industriale' : 'derë industriale'} ${inp.doorType === 'seks' ? 'seksionale' : 'rrotulluese'} ${f1(inp.doorW)} × ${f1(inp.doorH)} m${inp.doorMotor ? ' me motor' : ''}`);
-    if (inp.pDoorN) op.push(`${inp.pDoorN} ${inp.pDoorN > 1 ? 'dyer këmbësore' : 'derë këmbësore'}`);
-    if (inp.winA) op.push(`dritare ${fmt(inp.winA, 0)} m²`);
+    const op = E.describeOpenings(inp);
     if (inp.partA) op.push(`mure ndarëse me panel ${fmt(inp.partA, 0)} m²`);
     if (op.length) desc.push(['Dyer dhe hapje', op.join('; ') + '.']);
     desc.push(['Ulluqe dhe llamarina', `Ulluqe ${fmt(q.len.gutter, 0)} m, ${q.count.down} gypa shkarkimi, llamarina mbuluese në kulm, qoshe dhe buzë.`]);
@@ -510,7 +518,7 @@
     incl.push('projekti i zbatimit dhe vizatimet e punëtorisë');
     incl.push('prodhimi, ' + (inp.coat === 'zink' ? 'zinkimi' : 'lyerja') + ', transporti dhe montimi i strukturës metalike');
     incl.push('furnizimi dhe montimi i mbulesës, fasadës, ulluqeve dhe llamarinave');
-    if (inp.doorN || inp.pDoorN || inp.winA) incl.push('dyert dhe dritaret e përshkruara');
+    if (q.count.doorInd || q.count.pDoor || q.count.win) incl.push('dyert dhe dritaret e përshkruara');
     if (r.mezz) incl.push('mezanina me soletën' + (inp.mDeck === 'komp' ? ' (përfshirë betonin)' : ''));
     if (r.stairs) incl.push('shkallët me parmak');
     incl.push('bulonat e ankorimit me dado dhe pllakat e bazës');
@@ -633,7 +641,7 @@
   function makeDrawPDF() {
     return busy('#bDrawPdf', 'Duke përgatitur vizatimet…', async () => {
       const m = Object.assign(meta(), { bare: true });
-      const list = [['Prerja tërthore · portali tipik', Draw.section], ['Planimetria e kolonave', Draw.plan], ['Fasada anësore', Draw.side], ['Pamja ballore', Draw.front]];
+      const list = [['Prerja tërthore · portali tipik', Draw.section], ['Planimetria e kolonave', Draw.plan]].concat(['front', 'right', 'back', 'left'].map(sd => [Draw.FNAME[sd], (r, i, p, mm) => Draw.facade(r, i, p, mm, sd)]));
       const imgs = await Promise.all(list.map(([, f]) => Draw.toPNG(f(res, engIn, PRINT_PAL, m), 3)));
       const sheets = list.map(([t], i) => Object.assign({ title: t }, imgs[i]));
       ensure3D();
@@ -795,7 +803,7 @@
     });
   }
   function loadProject(p) {
-    inp = Object.assign(clone(DEF), p.inp || {});
+    inp = Object.assign(clone(DEF), E.migrateOpenings(p.inp || {}));
     projId = p.id;
     $('#projName').value = inp.name;
     build3dReset();
@@ -847,7 +855,7 @@
   async function init() {
     trackHeader();
     const draft = LS.get('kap.draft');
-    if (draft && draft.inp) { inp = Object.assign(clone(DEF), draft.inp); projId = draft.projId || null; }
+    if (draft && draft.inp) { inp = Object.assign(clone(DEF), E.migrateOpenings(draft.inp)); projId = draft.projId || null; }
     if (!inp.offerNo) inp.offerNo = newOfferNo();
     if (!inp.offerDate) inp.offerDate = today();
     $('#projName').value = inp.name;
@@ -888,7 +896,7 @@
     if (window.KapAdmin && KapAdmin.onReady) KapAdmin.onReady(window.KapApp);
   }
   function loadInputs(o) {
-    inp = Object.assign(clone(DEF), o || {});
+    inp = Object.assign(clone(DEF), E.migrateOpenings(o || {}));
     projId = null;
     $('#projName').value = inp.name;
     build3dReset(); refreshForm(); saveDraft(); compute();

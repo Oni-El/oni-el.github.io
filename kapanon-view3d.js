@@ -420,32 +420,14 @@ window.View3D = (function () {
       box(gC, W / 2 + ox, sock / 2, oz + gz[0], W + 2 * wOff, sock, 0.2, mats.sockel);
       box(gC, W / 2 + ox, sock / 2, oz + gz[1], W + 2 * wOff, sock, 0.2, mats.sockel);
     }
-    // dyert
-    const doorsFront = Math.min(inp.doorN, Math.max(1, Math.floor(W / (inp.doorW + 1.5))));
-    const zFront = gz[0] - 0.03;
-    for (let i = 0; i < doorsFront; i++) {
-      const xc = W * (i + 1) / (doorsFront + 1);
-      quad(gC, [P(xc - inp.doorW / 2, 0, zFront), P(xc + inp.doorW / 2, 0, zFront), P(xc + inp.doorW / 2, Math.min(inp.doorH, H - 0.2), zFront), P(xc - inp.doorW / 2, Math.min(inp.doorH, H - 0.2), zFront)], mats.door);
-    }
-    const rest = inp.doorN - doorsFront;
-    for (let i = 0; i < rest; i++) {
-      const zc = L * (i + 1) / (rest + 1), xw = W + wOff + 0.03;
-      quad(gC, [P(xw, 0, zc - inp.doorW / 2), P(xw, 0, zc + inp.doorW / 2), P(xw, Math.min(inp.doorH, H - 0.2), zc + inp.doorW / 2), P(xw, Math.min(inp.doorH, H - 0.2), zc - inp.doorW / 2)], mats.door);
-    }
-    for (let i = 0; i < inp.pDoorN; i++) {
-      const zc = Math.min(L - 1, 2 + i * 4), xw = -wOff - 0.03;
-      quad(gC, [P(xw, 0, zc - 0.5), P(xw, 0, zc + 0.5), P(xw, 2.2, zc + 0.5), P(xw, 2.2, zc - 0.5)], mats.door);
-    }
-    if (inp.winA > 0) {
-      const per = inp.winA / 2, n = Math.max(1, Math.round(per / (2.4 * 1.2)));
-      const wl = Math.min(2.4, per / n / 1.2);
-      [[-wOff - 0.03], [W + wOff + 0.03]].forEach(([xw]) => {
-        for (let i = 0; i < n; i++) {
-          const zc = L * (i + 0.5) / n;
-          quad(gC, [P(xw, 2.6, zc - wl / 2), P(xw, 2.6, zc + wl / 2), P(xw, 3.8, zc + wl / 2), P(xw, 3.8, zc - wl / 2)], mats.win);
-        }
-      });
-    }
+    // dyert dhe dritaret sipas fasadave
+    const lay = (res.open && res.open.lay) || {};
+    const zF0 = gz[0] - 0.03, zB0 = gz[1] + 0.03, xL0 = W + wOff + 0.03, xR0 = -wOff - 0.03;
+    Object.keys(lay).forEach(sd => lay[sd].forEach(it => {
+      const a = it.c - it.w / 2, b = it.c + it.w / 2, y0 = it.y0, y1 = it.y1, m = it.kind === 'win' ? mats.win : mats.door;
+      if (sd === 'front' || sd === 'back') { const z = sd === 'front' ? zF0 : zB0; quad(gC, [P(a, y0, z), P(b, y0, z), P(b, y1, z), P(a, y1, z)], m); }
+      else { const x = sd === 'left' ? xL0 : xR0; quad(gC, [P(x, y0, a), P(x, y0, b), P(x, y1, b), P(x, y1, a)], m); }
+    }));
     // akset dhe toka
     const gA = groups.axes;
     const letters = 'ABCDEFGHIJ';
