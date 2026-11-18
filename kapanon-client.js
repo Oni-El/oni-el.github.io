@@ -220,6 +220,7 @@
     $('#portal').innerHTML = '<div class="card"><p class="muted">Duke ngarkuar…</p></div>';
     const { data, error } = await c.rpc('get_request', { p_token: tok });
     if (error || !data) { $('#portal').innerHTML = `<div class="card"><h2>Linku nuk u gjet</h2><p class="muted">Kontrolloni linkun në email ose na kontaktoni.</p></div>`; return; }
+    if ((data.config || {}).kind === 'parking') { location.replace('parking.html?k=' + encodeURIComponent(tok)); return; }
     reqData = data;
     inp = Object.assign(clone(DEF), E.migrateOpenings(data.config || {}));
     editing = false; changed = false;

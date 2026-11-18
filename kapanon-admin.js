@@ -85,6 +85,7 @@
       $('#bReq').hidden = false;
       $('#bReq').addEventListener('click', openList);
       const bd = $('#bDocs'); if (bd) { bd.hidden = false; bd.addEventListener('click', () => { location.href = 'panel.html'; }); }
+      if (bd && !$('#bPark')) { const bp = document.createElement('button'); bp.className = 'hbtn'; bp.id = 'bPark'; bp.type = 'button'; bp.textContent = 'Parkingje'; bp.addEventListener('click', () => { location.href = 'admin-parking.html'; }); bd.insertAdjacentElement('afterend', bp); }
       $('#bLogout').addEventListener('click', async () => { await client().auth.signOut(); location.reload(); });
       refreshList().then(() => {
         const rid = new URLSearchParams(location.search).get('r');
@@ -99,7 +100,7 @@
     const c = client(); if (!c) return;
     const { data, error } = await c.from('kap_requests').select('id,nr,token,status,name,company,email,phone,site,note,config,summary,offer,offer_version,offer_at,confirmed_at,created_at,updated_at,admin_note').order('created_at', { ascending: false }).limit(200);
     if (error) { console.warn(error); return; }
-    list = data || [];
+    list = (data || []).filter(r => (r.config || {}).kind !== 'parking');   // parkingjet kanë panelin e tyre
     const n = list.filter(r => r.status === 'e_re' || r.status === 'ndryshuar').length;
     $('#bReq').textContent = 'Kërkesat' + (n ? ' · ' + n : '');
     $('#bReq').classList.toggle('pri', n > 0);
