@@ -179,7 +179,9 @@
     if (k) { openPortal(k); return; }
     const draft = LS.get('park.client.draft');
     if (draft) inp = Object.assign(clone(E.DEF), draft);
-    const m = new URLSearchParams(location.search).get('m'); if (m && E.MODELS[m]) inp.model = m;
+    const q = new URLSearchParams(location.search), m = q.get('m'), v = q.get('v');
+    if (m && E.MODELS[m]) { inp.model = m; if (m === 'rrjet' && !(inp.nRows >= 4)) inp.nRows = 4; }
+    if (v === 'V' || v === 'A') inp.vshape = v;
     const mine = LS.get('park.client.mine') || [];
     if (mine.length) { const a = $('#myReq'); a.hidden = false; a.innerHTML = 'Keni dërguar më parë kërkesën <a href="?k=' + encodeURIComponent(mine[0].token) + '">' + esc(mine[0].code) + '</a>. Hapeni për të parë statusin.'; }
     form.refresh(); compute();

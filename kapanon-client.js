@@ -307,6 +307,7 @@
     if (k) { openPortal(k); return; }
     const draft = LS.get('kap.client.draft');
     if (draft) inp = Object.assign(clone(DEF), E.migrateOpenings(draft));
+    if (new URLSearchParams(location.search).get('pv') === '1') inp.pv = true;
     const mine = LS.get('kap.client.mine') || [];
     if (mine.length) { const a = $('#myReq'); a.hidden = false; a.innerHTML = 'Keni dërguar më parë kërkesën <a href="?k=' + encodeURIComponent(mine[0].token) + '">' + esc(mine[0].code) + '</a>. Hapeni për të parë statusin.'; }
     refreshForm(); compute();
