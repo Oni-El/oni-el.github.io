@@ -51,7 +51,7 @@ window.ParkView3D = (function () {
     const mSteel = mat(C.steel, { metalness: 0.45, roughness: 0.45 });
     // sipërfaqja e parkingut
     const pad = 3;
-    const gr = new THREE.Mesh(new THREE.PlaneGeometry(L + 2 * pad + 40, D + 2 * pad + 40), mat(C.grass, { roughness: 1 }));
+    const gr = new THREE.Mesh(new THREE.PlaneGeometry(Math.max(L, D) + 400, Math.max(L, D) + 400), mat(C.grass, { roughness: 1 }));
     gr.rotation.x = -Math.PI / 2; gr.position.set(L / 2, -0.02, D / 2); gr.receiveShadow = true; root.add(gr);
     const asph = new THREE.Mesh(new THREE.PlaneGeometry(L + 2 * pad, D + 2 * pad + (i.model === 'konsol' || i.model === 'portal' ? 6 : 6)), mat(C.ground, { roughness: 0.95 }));
     asph.rotation.x = -Math.PI / 2; asph.position.set(L / 2, -0.01, D / 2 + 3); asph.receiveShadow = true; root.add(asph);
@@ -157,20 +157,34 @@ window.ParkView3D = (function () {
       g.carRows.forEach(r => g.ys.forEach(y => { const xc = g.cols.find(c => c >= r.x0 - 0.6 && c <= r.x1 + 0.6); spots.push({ y, z: xc != null ? xc + (r.dir > 0 ? ch / 2 + 0.1 : -ch / 2 - 0.1) : r.x0 + 0.3 }); }));
       spots.slice(0, res.opts.ev.n).forEach(s => { box(0.32, 0.5, 0.16, me, s.y, 1.25, s.z); box(0.2, 0.03, 0.17, mg, s.y, 1.42, s.z); });
     }
-    // makinat
+    // makinat (profil i thjeshtë me xhama dhe rrota, instancë për çdo vend të zënë)
     if (cars) {
-      const body = new THREE.BoxGeometry(1.8, 0.75, 4.3), cab = new THREE.BoxGeometry(1.6, 0.55, 2.3);
-      const n = g.spaces, mb = new THREE.InstancedMesh(body, mat(0xffffff, { roughness: 0.35, metalness: 0.4 }), n), mc = new THREE.InstancedMesh(cab, mat(0x1a2330, { roughness: 0.2, metalness: 0.3 }), n);
-      mb.castShadow = mc.castShadow = true; mb.receiveShadow = true;
-      const o = new THREE.Object3D(), col = new THREE.Color(); let k = 0, s = 7;
+      const W = 1.74, prof = (pts) => { const sh = new THREE.Shape(); sh.moveTo(pts[0][0], pts[0][1]); pts.slice(1).forEach(q => sh.lineTo(q[0], q[1])); sh.closePath(); return sh; };
+      const ext = (sh, w) => { const g = new THREE.ExtrudeGeometry(sh, { depth: w - 0.12, bevelEnabled: true, bevelSize: 0.06, bevelThickness: 0.06, bevelSegments: 2, curveSegments: 4 }); g.rotateY(-Math.PI / 2); g.translate((w - 0.12) / 2, 0, 0); return g; };
+      const bodyG = ext(prof([[-2.12, 0.32], [-2.15, 0.62], [-2.05, 0.9], [-1.4, 0.97], [1.05, 0.98], [1.95, 0.84], [2.15, 0.62], [2.12, 0.32], [1.75, 0.3], [1.68, 0.5], [1.0, 0.5], [0.93, 0.3], [-0.93, 0.3], [-1.0, 0.5], [-1.68, 0.5], [-1.75, 0.3]]), W);
+      const glassG = ext(prof([[-1.45, 0.96], [-1.05, 1.4], [0.25, 1.44], [1.02, 0.97]]), W - 0.14);
+      const wheelG = new THREE.CylinderGeometry(0.32, 0.32, 0.22, 20); wheelG.rotateZ(Math.PI / 2);
+      const n = g.spaces;
+      const mb = new THREE.InstancedMesh(bodyG, mat(0xffffff, { roughness: 0.3, metalness: 0.55 }), n);
+      const mg = new THREE.InstancedMesh(glassG, mat(0x1b2633, { roughness: 0.08, metalness: 0.6 }), n);
+      const mw = new THREE.InstancedMesh(wheelG, mat(0x16181b, { roughness: 0.8 }), n * 4);
+      mb.castShadow = mg.castShadow = mw.castShadow = true; mb.receiveShadow = true;
+      const o = new THREE.Object3D(), w = new THREE.Object3D(), col = new THREE.Color(); let k = 0, s = 7;
       g.carRows.forEach(r => { for (let j = 0; j < i.nSpaces; j++) {
         s = (s * 9301 + 49297) % 233280; if (s / 233280 < 0.22) continue;
-        const y = x0 + (j + 0.5) * i.spaceW, z = (r.x0 + r.x1) / 2 + (r.dir > 0 ? 0.25 : -0.25);
-        o.position.set(y, 0.55, z); o.rotation.set(0, 0, 0); o.updateMatrix(); mb.setMatrixAt(k, o.matrix);
-        o.position.set(y, 1.2, z + (r.dir > 0 ? 0.25 : -0.25)); o.updateMatrix(); mc.setMatrixAt(k, o.matrix);
-        mb.setColorAt(k, col.setHex(CAR[(s >> 3) % CAR.length])); k++;
+        const y = x0 + (j + 0.5) * i.spaceW, z = (r.x0 + r.x1) / 2 + (r.dir > 0 ? -0.1 : 0.1);
+        const rot = r.dir > 0 ? Math.PI : 0;
+        o.position.set(y, 0, z); o.rotation.set(0, rot, 0); o.updateMatrix();
+        mb.setMatrixAt(k, o.matrix); mg.setMatrixAt(k, o.matrix);
+        mb.setColorAt(k, col.setHex(CAR[(s >> 3) % CAR.length]));
+        [[-0.76, -1.35], [0.76, -1.35], [-0.76, 1.33], [0.76, 1.33]].forEach((q, m) => {
+          const c = Math.cos(rot), sn = Math.sin(rot);
+          w.position.set(y + q[0] * c + q[1] * sn, 0.32, z - q[0] * sn + q[1] * c); w.rotation.set(0, rot, 0); w.updateMatrix(); mw.setMatrixAt(k * 4 + m, w.matrix);
+        });
+        k++;
       } });
-      mb.count = mc.count = k; if (mb.instanceColor) mb.instanceColor.needsUpdate = true; root.add(mb); root.add(mc);
+      mb.count = mg.count = k; mw.count = k * 4; if (mb.instanceColor) mb.instanceColor.needsUpdate = true;
+      root.add(mb); root.add(mg); root.add(mw);
     }
     fit(res);
     dirty = true;
@@ -191,9 +205,24 @@ window.ParkView3D = (function () {
     controls.update(); dirty = true;
   }
   function setView(v) { view = v; if (last) fit(last); }
+  // pamje e lirë (për renderat e faqes): az/el në gradë, dist si shumëfish i distancës standarde, sfond dhe mjegull
+  function look(o) {
+    if (!ready) return;
+    if (o.bg != null) { scene.background = new THREE.Color(o.bg); scene.fog = o.fog ? new THREE.Fog(o.bg, o.fog[0], o.fog[1]) : null; }
+    if (last && o.az != null) {
+      const g = last.geo, cx = g.L / 2, cz = g.D / 2, R = Math.max(g.L, g.D, 8);
+      const d = (o.dist || 1) * (R * 1.15 + 4), el = (o.el || 25) * Math.PI / 180, az = o.az * Math.PI / 180;
+      controls.target.set(cx + (o.dx || 0), o.ty != null ? o.ty : g.hmax * 0.45, cz + (o.dz || 0));
+      camera.position.set(cx + (o.dx || 0) + d * Math.cos(el) * Math.sin(az), d * Math.sin(el), cz + (o.dz || 0) + d * Math.cos(el) * Math.cos(az));
+      if (o.fov) { camera.fov = o.fov; camera.updateProjectionMatrix(); }
+      if (o.fogRel && o.bg != null) scene.fog = new THREE.Fog(o.bg, d * o.fogRel[0], d * o.fogRel[1]);
+      controls.update();
+    }
+    dirty = true;
+  }
   function setCars(v) { cars = !!v; if (last) build(last); }
   function snapshot() { if (!ready) return null; renderer.render(scene, camera); return renderer.domElement.toDataURL('image/png'); }
-  return { init, build, resize, setView, setCars, snapshot, get ready() { return ready; } };
+  return { init, build, resize, setView, setCars, snapshot, look, get ready() { return ready; } };
 })();
 
 /* Planimetria (SVG) nga lart: vendet, kolonat, korsitë, streha */

@@ -39,6 +39,9 @@
     .nav-links{display:flex;gap:2rem}
     .nav-links a{color:#a0aab8;font-size:12px;text-decoration:none;letter-spacing:.5px;text-transform:uppercase;transition:color .2s}
     .nav-links a:hover{color:#f4a012}
+    .nav-links a[data-tip]{position:relative}
+    .nav-links a[data-tip]::after{content:attr(data-tip);position:absolute;top:calc(100% + 12px);left:50%;transform:translate(-50%,-4px);background:#1a2535;border:1px solid #f4a012;color:#e8eaf0;font-size:11.5px;letter-spacing:0;text-transform:none;white-space:nowrap;padding:6px 10px;border-radius:4px;opacity:0;pointer-events:none;transition:opacity .15s,transform .15s;z-index:120}
+    .nav-links a[data-tip]:hover::after,.nav-links a[data-tip]:focus-visible::after{opacity:1;transform:translate(-50%,0)}
     .nav-right{display:flex;gap:.6rem;align-items:center}
     .lang-btn{background:none;border:1px solid #2e3d50;color:#a0aab8;font-size:11px;padding:4px 10px;border-radius:3px;cursor:pointer;transition:all .2s}
     .lang-btn.active{border-color:#f4a012;color:#f4a012}
@@ -145,6 +148,8 @@
     .cp-model.featured{border-color:rgba(244,160,18,.5)}
     .cp-model-img{background:#f0f0f0;height:200px;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
     .cp-model-img img{width:100%;height:100%;object-fit:contain;padding:.8rem}
+    .cp-model-img img.render{object-fit:cover;padding:0}
+    .viz-tag{position:absolute;right:8px;bottom:8px;background:rgba(10,14,20,.72);color:#e8eaf0;font-size:10px;letter-spacing:.5px;text-transform:uppercase;padding:3px 7px;border-radius:3px;pointer-events:none}
     .cp-model-tag{position:absolute;top:.6rem;left:.6rem;font-size:9px;font-weight:700;letter-spacing:1px;color:#f4a012;background:rgba(10,14,20,.9);border:1px solid rgba(244,160,18,.3);padding:2px 7px;border-radius:3px;text-transform:uppercase}
     .cp-popular{position:absolute;top:.6rem;right:.6rem;font-size:9px;font-weight:700;color:#0a0e14;background:#f4a012;padding:2px 7px;border-radius:3px;text-transform:uppercase}
     .cp-model-body{padding:1.2rem}
@@ -280,6 +285,8 @@
       nav .nav-links{display:none;position:fixed;top:72px;left:0;right:0;flex-direction:column;gap:0;background:#0a0e14;border-bottom:1px solid #263548;padding:.5rem 1.2rem 1rem}
       nav .nav-links.open{display:flex}
       nav .nav-links a{padding:14px 0;border-bottom:1px solid #1a2535}
+      nav .nav-links a[data-tip]::after{position:static;display:block;transform:none;opacity:1;background:none;border:0;padding:3px 0 0;color:#607088;font-size:11px;white-space:normal}
+      nav .nav-links a[data-tip]:hover::after,nav .nav-links a[data-tip]:focus-visible::after{transform:none}
       nav .lang-btn{display:none}
       nav{padding:0 1.2rem}
       .hero h1{font-size:30px}
@@ -459,8 +466,8 @@
   <div class="nav-links">
     <a href="#services">Shërbimet</a>
     <a href="#products">Produktet</a>
-    <a href="kapanon.html">Konfiguruesi</a>
-    <a href="parking.html">Parkingje</a>
+    <a href="kapanon.html" data-tip="Modelo kapanonin tënd">Kapanonë</a>
+    <a href="parking.html" data-tip="Modelo carport-in tënd">Carports</a>
     <a href="#partners">Partnerët</a>
     <a href="#contact">Kontakt</a>
   </div>
@@ -803,7 +810,7 @@
 
       <div class="cp-model featured">
         <div class="cp-model-img">
-          <img src="assets/img-02.jpg" alt="Carport MEGA"/>
+          <img class="render" src="assets/carport-mega.jpg" alt="Carport MEGA, strehë me disa rreshta dhe panele diellore (vizualizim 3D)" loading="lazy"/><span class="viz-tag">Vizualizim 3D</span>
           <span class="cp-model-tag">Carport</span>
           <span class="cp-popular">⭐ Popular</span>
         </div>
@@ -822,7 +829,7 @@
 
       <div class="cp-model">
         <div class="cp-model-img">
-          <img src="assets/img-06.jpg" alt="Carport Basic Type L"/>
+          <img class="render" src="assets/carport-l.jpg" alt="Carport Basic Type L, konsol me një kolonë (vizualizim 3D)" loading="lazy"/><span class="viz-tag">Vizualizim 3D</span>
           <span class="cp-model-tag">Carport</span>
         </div>
         <div class="cp-model-body">
@@ -840,7 +847,7 @@
 
       <div class="cp-model">
         <div class="cp-model-img">
-          <img src="assets/img-02.jpg" alt="Carport Basic Type T"/>
+          <img class="render" src="assets/carport-t.jpg" alt="Carport Basic Type T, kolonë në mes me çati A (vizualizim 3D)" loading="lazy"/><span class="viz-tag">Vizualizim 3D</span>
           <span class="cp-model-tag">Carport</span>
         </div>
         <div class="cp-model-body">
@@ -858,7 +865,7 @@
 
       <div class="cp-model">
         <div class="cp-model-img">
-          <img src="assets/img-07.jpg" alt="Carport Basic Type Y"/>
+          <img class="render" src="assets/carport-y.jpg" alt="Carport Basic Type Y, kolonë në mes me çati V (vizualizim 3D)" loading="lazy"/><span class="viz-tag">Vizualizim 3D</span>
           <span class="cp-model-tag">Carport</span>
         </div>
         <div class="cp-model-body">
