@@ -20,8 +20,11 @@
     return sb;
   }
 
+  // dita / nata në pamjen 3D (natën duken dritat LED)
+  function setNight(v) { $$('#vTime button').forEach(x => x.setAttribute('aria-pressed', String((x.dataset.n === '1') === !!v))); ParkView3D.setNight(v); }
   function setVal(k, v, typing) {
     if (!editing) return;
+    if (k === 'led' && !!v !== !!inp.led) setTimeout(() => setNight(!!v), 0);
     inp[k] = v;
     if (k === 'model' && v === 'rrjet' && !(inp.nRows >= 4)) inp.nRows = 4;
     if (k === 'cover' && v === 'pv' && inp.tilt < 3) inp.tilt = 7;
@@ -171,6 +174,7 @@
     $$('.vtabs button').forEach(b => b.addEventListener('click', () => showTab(b.dataset.t)));
     $$('#vView button').forEach(b => b.addEventListener('click', () => { $$('#vView button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); ParkView3D.setView(b.dataset.v); }));
     $$('#vCars button').forEach(b => b.addEventListener('click', () => { $$('#vCars button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); ParkView3D.setCars(b.dataset.c === '1'); }));
+    $$('#vTime button').forEach(b => b.addEventListener('click', () => setNight(b.dataset.n === '1')));
     $$('.nodl').forEach(el => { el.addEventListener('contextmenu', e => e.preventDefault()); el.addEventListener('dragstart', e => e.preventDefault()); });
     $('#reqForm').addEventListener('submit', submit);
     $('#bSaveEdit').addEventListener('click', saveEdit);

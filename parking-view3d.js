@@ -1,7 +1,30 @@
 /* Oni-El · Parkingje: modeli 3D (three.js r128). Boshtet: X = gjatësia e parkingut, Y = lart, Z = thellësia (para = +Z). */
 window.ParkView3D = (function () {
   'use strict';
-  let el, renderer, scene, camera, controls, root, ready = false, cars = true, last = null, raf = 0, dirty = true, sun;
+  let el, renderer, scene, camera, controls, root, ready = false, cars = true, last = null, raf = 0, dirty = true, sun, hemi, night = false, dayBg = 0x0f1722;
+  const TEX = {};
+  // tekstura të vizatuara në canvas (ndriçimi i tokës, simboli i karikimit, etiketat)
+  function canvasTex(key, w, h, draw) {
+    if (TEX[key]) return TEX[key];
+    const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h);
+    const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; t.anisotropy = 4; TEX[key] = t; return t;
+  }
+  const glowTex = () => canvasTex('glow', 256, 256, (x, w) => { const g = x.createRadialGradient(w / 2, w / 2, 0, w / 2, w / 2, w / 2); g.addColorStop(0, 'rgba(255,236,190,0.95)'); g.addColorStop(0.35, 'rgba(255,220,160,0.45)'); g.addColorStop(1, 'rgba(255,210,150,0)'); x.fillStyle = g; x.fillRect(0, 0, w, w); });
+  const boltTex = () => canvasTex('bolt', 256, 256, (x) => { x.fillStyle = 'rgba(255,255,255,0.92)'; x.beginPath(); x.moveTo(150, 18); x.lineTo(62, 142); x.lineTo(120, 142); x.lineTo(98, 238); x.lineTo(196, 104); x.lineTo(136, 104); x.closePath(); x.fill(); });
+  function labelSprite(text, sub) {
+    const t = canvasTex('lbl:' + text + '|' + (sub || ''), 512, sub ? 168 : 112, (x, w, h) => {
+      x.font = '700 46px Inter, Arial, sans-serif'; const tw = x.measureText(text).width; x.font = '500 34px Inter, Arial, sans-serif'; const sw = sub ? x.measureText(sub).width : 0;
+      const bw = Math.min(w - 8, Math.max(tw, sw) + 56), bx = (w - bw) / 2;
+      x.fillStyle = 'rgba(10,14,20,0.86)'; x.strokeStyle = '#f4a012'; x.lineWidth = 5;
+      const r = 18; x.beginPath(); x.moveTo(bx + r, 4); x.arcTo(bx + bw - 4, 4, bx + bw - 4, h - 4, r); x.arcTo(bx + bw - 4, h - 4, bx + 4, h - 4, r); x.arcTo(bx + 4, h - 4, bx + 4, 4, r); x.arcTo(bx + 4, 4, bx + bw - 4, 4, r); x.closePath(); x.fill(); x.stroke();
+      x.fillStyle = '#ffffff'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.font = '700 46px Inter, Arial, sans-serif'; x.fillText(text, w / 2, sub ? 56 : h / 2);
+      if (sub) { x.fillStyle = '#f4a012'; x.font = '500 34px Inter, Arial, sans-serif'; x.fillText(sub, w / 2, 118); }
+    });
+    // madhësi e njëjtë në ekran pavarësisht distancës (≈50 px e lartë)
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthTest: false, transparent: true, sizeAttenuation: false }));
+    const H = Math.max(240, el.clientHeight || 500), px = Math.min(56, Math.max(40, H * 0.085)) * (sub ? 1 : 0.7);
+    const hgt = px / H * 2 * Math.tan(camera.fov * Math.PI / 360); sp.scale.set(hgt * 512 / (sub ? 168 : 112), hgt, 1); sp.renderOrder = 10; return sp;
+  }
   const C = { steel: 0x9aa7b4, pv: 0x1d2c4a, pvFrame: 0xc9d1d9, sheet: 0xb9c2ca, sandwich: 0xe9e6dc, poly: 0xcfe6ff, ground: 0x2a3036, line: 0xe8eaf0, grass: 0x23382a, gutter: 0x8d99a6, close: 0xb9c2ca, led: 0xfff3c4, ev: 0x16a34a };
   const CAR = [0xd9dde2, 0x2b2f36, 0x8a1c1c, 0x2f4f7f, 0x6b7280, 0xf1f1ef, 0x3f5d4a, 0x9c6b2f];
 
@@ -18,7 +41,7 @@ window.ParkView3D = (function () {
     controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true; controls.dampingFactor = 0.12; controls.maxPolarAngle = Math.PI / 2 - 0.03;
     controls.addEventListener('change', () => { dirty = true; });
-    scene.add(new THREE.HemisphereLight(0xdfe8f5, 0x2a2f36, 0.75));
+    hemi = new THREE.HemisphereLight(0xdfe8f5, 0x2a2f36, 0.75); scene.add(hemi);
     sun = new THREE.DirectionalLight(0xffffff, 0.95); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048); sun.shadow.bias = -0.0006;
     scene.add(sun); scene.add(sun.target);
     ready = true;
@@ -145,17 +168,82 @@ window.ParkView3D = (function () {
         }));
       }
     }
-    // ndriçimi LED nën strehë
+    // ndriçimi LED nën strehë: ndriçues me xham; natën ndizen dhe ndriçojnë tokën
     if (res.opts.led) {
-      const ml = new THREE.MeshBasicMaterial({ color: C.led });
-      g.carRows.forEach(r => { for (let k = 0; k < Math.ceil(i.nSpaces / 2); k++) { const y = x0 + (2 * k + 1) * i.spaceW; const z = (r.x0 + r.x1) / 2; box(0.5, 0.03, 0.12, ml, Math.min(y, L - 0.3), g.zAt(z) + bh - 0.03, z); } });
+      const mh = mat(0x3a4048, { metalness: 0.5, roughness: 0.4 });
+      const ml = night ? new THREE.MeshBasicMaterial({ color: 0xfff6dc }) : mat(0xf2f2ee, { roughness: 0.3, emissive: 0x333333 });
+      const fx = [];
+      g.carRows.forEach(r => { for (let k = 0; k < Math.ceil(i.nSpaces / 2); k++) { const y = Math.min(x0 + (2 * k + 1) * i.spaceW, L - 0.3), z = (r.x0 + r.x1) / 2, h = g.zAt(z) + bh - 0.03; box(0.62, 0.05, 0.16, mh, y, h, z); box(0.56, 0.012, 0.1, ml, y, h - 0.03, z); fx.push([y, h, z]); } });
+      if (night) {
+        const pool = new THREE.MeshBasicMaterial({ map: glowTex(), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+        const cone = new THREE.MeshBasicMaterial({ color: 0xffe6b0, transparent: true, opacity: 0.055, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
+        const step = Math.max(1, Math.ceil(fx.length / 8));
+        fx.forEach((f, k) => {
+          const rad = Math.min(3.4, f[1] * 1.05);
+          const pl = new THREE.Mesh(new THREE.PlaneGeometry(rad * 2, rad * 2), pool); pl.rotation.x = -Math.PI / 2; pl.position.set(f[0], 0.02, f[2]); root.add(pl);
+          const cg = new THREE.CylinderGeometry(0.25, rad * 0.75, f[1] - 0.05, 24, 1, true), cm = new THREE.Mesh(cg, cone); cm.position.set(f[0], (f[1] - 0.05) / 2, f[2]); root.add(cm);
+          if (k % step === 0) { const lt = new THREE.PointLight(0xffe2b0, 1.6, 9, 2); lt.position.set(f[0], f[1] - 0.25, f[2]); root.add(lt); }
+        });
+      }
     }
-    // karikuesit
+    // vendet me karikues: ngjyrë e gjelbër në tokë, simboli i karikimit, kolonë karikimi dhe kabllo te makina
+    const evSpots = [];
     if (res.opts.ev) {
-      const me = mat(0xe8eaf0, { roughness: 0.4 }), mg = new THREE.MeshBasicMaterial({ color: C.ev });
-      const spots = [];
-      g.carRows.forEach(r => g.ys.forEach(y => { const xc = g.cols.find(c => c >= r.x0 - 0.6 && c <= r.x1 + 0.6); spots.push({ y, z: xc != null ? xc + (r.dir > 0 ? ch / 2 + 0.1 : -ch / 2 - 0.1) : r.x0 + 0.3 }); }));
-      spots.slice(0, res.opts.ev.n).forEach(s => { box(0.32, 0.5, 0.16, me, s.y, 1.25, s.z); box(0.2, 0.03, 0.17, mg, s.y, 1.42, s.z); });
+      const all = []; g.carRows.forEach((r, ri) => { for (let j = 0; j < i.nSpaces; j++) all.push({ r, ri, j }); });
+      const n = Math.min(res.opts.ev.n, all.length);
+      for (let k = 0; k < n; k++) evSpots.push(all[Math.floor((k + 0.5) * all.length / n)]);
+      const paint = mat(0x1f8f4e, { transparent: true, opacity: 0.55, roughness: 0.9, depthWrite: false });
+      const bolt = new THREE.MeshBasicMaterial({ map: boltTex(), transparent: true, depthWrite: false });
+      const mPost = mat(0x2b3138, { metalness: 0.4 }), mBody = mat(0xeef1f4, { roughness: 0.35 }), mFace = mat(0x1a222c, { roughness: 0.2, metalness: 0.4 });
+      const mRing = new THREE.MeshBasicMaterial({ color: 0x22e07a }), mCable = mat(0x111315, { roughness: 0.7 });
+      evSpots.forEach((e, k) => {
+        const r = e.r, yc = x0 + (e.j + 0.5) * i.spaceW, len = r.x1 - r.x0 - 0.3, zc = (r.x0 + r.x1) / 2;
+        const pt = new THREE.Mesh(new THREE.PlaneGeometry(i.spaceW - 0.14, len), paint); pt.rotation.x = -Math.PI / 2; pt.position.set(yc, 0.004, zc); root.add(pt);
+        const tail = r.dir > 0 ? r.x1 - 0.85 : r.x0 + 0.85;
+        const bl = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.9), bolt); bl.rotation.x = -Math.PI / 2; bl.position.set(yc, 0.006, tail); root.add(bl);
+        const nose = r.dir > 0 ? r.x0 : r.x1, inz = r.dir > 0 ? 1 : -1;           // ana nga hyn hunda e makinës
+        const py = yc + i.spaceW / 2 - 0.32, pz = nose + inz * 0.32;
+        box(0.12, 1.05, 0.12, mPost, py, 0.525, pz);
+        box(0.34, 0.48, 0.17, mBody, py, 1.27, pz);
+        const face = box(0.26, 0.36, 0.01, mFace, py, 1.29, pz + inz * 0.09);
+        const ring = new THREE.Mesh(new THREE.RingGeometry(0.06, 0.085, 32), mRing); ring.position.set(py, 1.33, pz + inz * 0.097); if (inz < 0) ring.rotation.y = Math.PI; root.add(ring);
+        box(0.36, 0.02, 0.19, mBody, py, 1.52, pz);
+        e.port = [yc + 0.55, 0.72, nose + inz * 0.28]; e.from = [py - 0.17, 1.12, pz + inz * 0.04];
+        if (k === Math.floor((evSpots.length - 1) / 2)) { const sp = labelSprite('Karikues ' + String(res.opts.ev.kw).replace('.', ',') + ' kW', res.opts.ev.n > 1 ? res.opts.ev.n + ' vende' : ''); sp.position.set(py, 2.15, pz); root.add(sp); }
+      });
+      // kabllot lidhen pas vendosjes së makinave
+      evSpots.cable = (hasCar) => evSpots.forEach(e => {
+        if (!hasCar(e)) { const tor = new THREE.Mesh(new THREE.TorusGeometry(0.13, 0.018, 8, 24), mCable); tor.position.set(e.from[0] - 0.03, 0.95, e.from[2]); tor.rotation.y = Math.PI / 2; root.add(tor); return; }
+        const a = new THREE.Vector3(...e.from), b = new THREE.Vector3(...e.port);
+        const cur = new THREE.CatmullRomCurve3([a, new THREE.Vector3(a.x - 0.05, 0.25, a.z), new THREE.Vector3((a.x + b.x) / 2, 0.08, (a.z + b.z) / 2), new THREE.Vector3(b.x, 0.35, b.z), b]);
+        root.add(new THREE.Mesh(new THREE.TubeGeometry(cur, 40, 0.018, 8, false), mCable));
+      });
+    }
+    // inverteri dhe bateritë: kabinë teknike në skajin e djathtë të strehës
+    const eqInv = res.opts.inverter, eqBat = res.opts.battery;
+    if (eqInv || eqBat) {
+      const nb = eqBat ? Math.min(7, Math.ceil(eqBat.kwh / 15)) : 0;
+      const ex = L + 0.9, z0 = i.model === 'konsol' || i.model === 'portal' ? 0.35 : Math.max(0.3, g.cols[0] - 1.6);
+      const depth = 0.9 + nb * 0.68 + (eqInv ? 0.9 : 0);
+      box(1.3, 0.12, depth, mat(0xb9bdc2, { roughness: 0.9 }), ex + 0.3, 0.06, z0 + depth / 2 - 0.2);
+      const mCab = mat(0xe9ecef, { roughness: 0.4 }), mDark = mat(0x1d2733, { roughness: 0.25, metalness: 0.4 }), mLed = new THREE.MeshBasicMaterial({ color: 0x22e07a });
+      let z = z0 + 0.25;
+      if (eqInv) {
+        const mFr = mat(0x5b6570, { metalness: 0.5 });
+        box(0.06, 1.9, 0.06, mFr, ex + 0.3, 1.07, z - 0.28); box(0.06, 1.9, 0.06, mFr, ex + 0.3, 1.07, z + 0.28); box(0.06, 0.06, 0.62, mFr, ex + 0.3, 1.9, z);
+        box(0.24, 0.72, 0.56, mCab, ex + 0.18, 1.4, z);
+        box(0.01, 0.2, 0.3, mDark, ex + 0.055, 1.52, z); box(0.012, 0.03, 0.03, mLed, ex + 0.055, 1.33, z + 0.1);
+        z += 0.95;
+      }
+      for (let k = 0; k < nb; k++) {
+        box(0.6, 1.3, 0.6, mCab, ex + 0.3, 0.77, z + k * 0.68);
+        box(0.01, 0.05, 0.4, mLed, ex - 0.005, 1.3, z + k * 0.68);
+        box(0.01, 0.6, 0.45, mDark, ex - 0.005, 0.85, z + k * 0.68);
+      }
+      // një etiketë e vetme për kabinën teknike
+      const nr = v => String(v).replace('.', ',');
+      const sp = nb ? labelSprite('Bateri ' + nr(eqBat.kwh) + ' kWh', eqInv ? 'Inverter ' + nr(eqInv.kw) + ' kW' : '') : labelSprite('Inverter', nr(eqInv.kw) + ' kW');
+      sp.position.set(ex + 0.3, 2.5, z0 + depth / 2 - 0.2); root.add(sp);
     }
     // makinat (profil i thjeshtë me xhama dhe rrota, instancë për çdo vend të zënë)
     if (cars) {
@@ -171,7 +259,7 @@ window.ParkView3D = (function () {
       mb.castShadow = mg.castShadow = mw.castShadow = true; mb.receiveShadow = true;
       const o = new THREE.Object3D(), w = new THREE.Object3D(), col = new THREE.Color(); let k = 0, s = 7;
       g.carRows.forEach(r => { for (let j = 0; j < i.nSpaces; j++) {
-        s = (s * 9301 + 49297) % 233280; if (s / 233280 < 0.22) continue;
+        s = (s * 9301 + 49297) % 233280; const isEv = evSpots.some(e => e.r === r && e.j === j); if (s / 233280 < 0.22 && !isEv) continue;
         const y = x0 + (j + 0.5) * i.spaceW, z = (r.x0 + r.x1) / 2 + (r.dir > 0 ? -0.1 : 0.1);
         const rot = r.dir > 0 ? Math.PI : 0;
         o.position.set(y, 0, z); o.rotation.set(0, rot, 0); o.updateMatrix();
@@ -186,15 +274,19 @@ window.ParkView3D = (function () {
       mb.count = mg.count = k; mw.count = k * 4; if (mb.instanceColor) mb.instanceColor.needsUpdate = true;
       root.add(mb); root.add(mg); root.add(mw);
     }
+    if (evSpots.cable) evSpots.cable(() => cars);
     fit(res);
     dirty = true;
   }
   let view = 'iso';
   function fit(res) {
-    const g = res.geo, cx = g.L / 2, cz = g.D / 2, R = Math.max(g.L, g.D, 8);
+    // kabina e inverterit/baterive në skaj hyn në kuadër
+    const g = res.geo, eq = res.opts && (res.opts.inverter || res.opts.battery) ? 2.2 : 0, cx = (g.L + eq) / 2, cz = g.D / 2, R = Math.max(g.L + eq, g.D, 8);
     const ty = g.hmax * 0.5;
     controls.target.set(cx, ty, cz);
-    const d = R * 1.15 + 4;
+    // në ekrane të ngushta (celular) kamera largohet që modeli të hyjë i tëri në gjerësi
+    const asp = camera.aspect, k = asp < 1 ? 1.1 / Math.max(0.5, asp) : (view === 'iso' && asp > 1.2 ? 0.85 : 1);
+    const d = (R * 1.15 + 4) * k;
     if (view === 'front') camera.position.set(cx, g.hmax * 0.8, g.D + d);
     else if (view === 'side') camera.position.set(g.L + d, g.hmax * 0.9, cz);
     else if (view === 'top') camera.position.set(cx + 0.01, d * 1.5, cz + 0.01);
@@ -208,7 +300,7 @@ window.ParkView3D = (function () {
   // pamje e lirë (për renderat e faqes): az/el në gradë, dist si shumëfish i distancës standarde, sfond dhe mjegull
   function look(o) {
     if (!ready) return;
-    if (o.bg != null) { scene.background = new THREE.Color(o.bg); scene.fog = o.fog ? new THREE.Fog(o.bg, o.fog[0], o.fog[1]) : null; }
+    if (o.bg != null) { dayBg = o.bg; scene.background = new THREE.Color(o.bg); scene.fog = o.fog ? new THREE.Fog(o.bg, o.fog[0], o.fog[1]) : null; }
     if (last && o.az != null) {
       const g = last.geo, cx = g.L / 2, cz = g.D / 2, R = Math.max(g.L, g.D, 8);
       const d = (o.dist || 1) * (R * 1.15 + 4), el = (o.el || 25) * Math.PI / 180, az = o.az * Math.PI / 180;
@@ -221,8 +313,15 @@ window.ParkView3D = (function () {
     dirty = true;
   }
   function setCars(v) { cars = !!v; if (last) build(last); }
+  // dita / nata: natën shihet ndriçimi LED dhe dritat e pajisjeve
+  function setNight(v) {
+    night = !!v; if (!ready) return;
+    if (night) { scene.background = new THREE.Color(0x04070c); hemi.intensity = 0.14; hemi.color.setHex(0x6f86ad); sun.intensity = 0.12; sun.color.setHex(0x9fb3d6); }
+    else { scene.background = new THREE.Color(dayBg); hemi.intensity = 0.75; hemi.color.setHex(0xdfe8f5); sun.intensity = 0.95; sun.color.setHex(0xffffff); }
+    if (last) build(last); dirty = true;
+  }
   function snapshot() { if (!ready) return null; renderer.render(scene, camera); return renderer.domElement.toDataURL('image/png'); }
-  return { init, build, resize, setView, setCars, snapshot, look, get ready() { return ready; } };
+  return { init, build, resize, setView, setCars, setNight, snapshot, look, get ready() { return ready; }, get night() { return night; } };
 })();
 
 /* Planimetria (SVG) nga lart: vendet, kolonat, korsitë, streha */
