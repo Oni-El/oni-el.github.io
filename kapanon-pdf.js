@@ -304,7 +304,7 @@ window.OfferPDF = (function () {
       if (b.img) {
         const w = CW, h = w * b.img.h / b.img.w;
         need(h + 4);
-        d.addImage(b.img.url, 'PNG', M, y, w, h, undefined, 'FAST');
+        d.addImage(b.img.url, b.img.fmt || 'PNG', M, y, w, h, undefined, 'FAST');
         d.setDrawColor(...C.line); d.setLineWidth(0.2); d.rect(M, y, w, h);
         y += h + 5;
       }

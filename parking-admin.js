@@ -7,7 +7,7 @@
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
   const clone = o => JSON.parse(JSON.stringify(o));
   const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  const fmt = E.fmt, f1 = v => fmt(v, 1), f2 = v => fmt(v, 2);
+  const fmt = E.fmt, f1 = v => fmt(v, 1), f2 = v => fmt(v, 2), kwStr = v => String(v).replace('.', ',');
   const LSget = k => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch (e) { return null; } };
   const LSset = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } };
   const dstr = d => { const p = n => String(n).padStart(2, '0'); return p(d.getDate()) + '.' + p(d.getMonth() + 1) + '.' + d.getFullYear(); };
@@ -17,9 +17,12 @@
     pay: '40% paradhënie me konfirmimin, 50% para dërgimit të materialeve, 10% në përfundim të montimit.',
     incl: 'Projekti i strukturës, prodhimi, zinkimi, transporti, themelet dhe montimi; pajisjet dhe opsionet e listuara.',
     excl: 'Leja e ndërtimit, lidhja me OSHEE dhe matësi dypalësh, asfaltimi dhe vijëzimi i parkingut, linja elektrike deri te paneli i objektit.',
-    note: 'Çmimet janë pa TVSH. Prodhimi i energjisë diellore është vlerësim (±10%) dhe varet nga hijet dhe moti.' };
+    note: 'Çmimet janë pa TVSH. Prodhimi i energjisë diellore është vlerësim (±10%) dhe varet nga hijet dhe moti.',
+    client: '', site: '', offerNo: '', showVat: true, showSave: true, tBasis: 'space' };
+  // të dhënat e kompanisë merren nga cilësimet e kalkulatorit të kapanonëve (price_settings), që ofertat të jenë njësoj
+  let company = { name: 'Oni-El', nipt: '', addr: 'Elbasan, Shqipëri', phone: '+355 68 315 5705', email: '', signer: '' };
 
-  let sb = null, inp = clone(E.DEF), eng = clone(E.ENG), off = clone(OFFER_DEF), prices = null, res = null, cost = null, current = null, list = [], form = null, curTab = 'm3d';
+  let sb = null, inp = clone(E.DEF), eng = clone(E.ENG), off = clone(OFFER_DEF), prices = null, res = null, cost = null, current = null, list = [], form = null, curTab = 'm3d', built = null;
   function client() { if (sb) return sb; if (!CFG.url || !CFG.anonKey || !window.supabase) return null; sb = window.supabase.createClient(CFG.url, CFG.anonKey); return sb; }
   function toast(t) { const el = $('#toast'); el.textContent = t; el.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => { el.hidden = true; }, 3500); }
   const code = r => 'PRK-' + String(r.nr).padStart(4, '0');
@@ -53,6 +56,13 @@
     try { prices = data && data.value ? JSON.parse(data.value) : {}; } catch (e) { prices = {}; }
     const wb = $('#warnBar');
     if (!(+prices.stMat > 0)) { wb.hidden = false; wb.innerHTML = '<b>Çmimet e parkingjeve mungojnë.</b> Ekzekuto skedarin supabase-parking.sql te Supabase ose plotësoji te «Çmimet».'; } else wb.hidden = true;
+  }
+  async function loadCompany() {
+    try {
+      const { data, error } = await client().from('price_settings').select('data').eq('id', 1).maybeSingle();
+      const c = !error && data && data.data && data.data.company;
+      if (c) Object.keys(c).forEach(k => { if (c[k]) company[k] = c[k]; });
+    } catch (e) { console.warn(e); }
   }
   function openPrices() {
     const box = $('#prBody');
@@ -95,6 +105,8 @@
     const same = prev && prev.cfgSig === JSON.stringify(r.config);
     eng = Object.assign(clone(E.ENG), same ? prev.eng : {});
     off = Object.assign(clone(OFFER_DEF), same ? prev.off : {});
+    if (!off.client) off.client = r.company ? r.company + ' · ' + r.name : r.name;
+    if (!off.site) off.site = r.site || '';
     form.refresh(); renderEng(); renderOff(); compute(); renderBar();
     showTab('cost');
     history.replaceState(null, '', location.pathname + '?r=' + r.id);
@@ -156,7 +168,12 @@
     }));
   }
   function renderOff() {
+    const tx = (k, l, ph) => `<label class="f w2"><span class="fl">${l}</span><span class="inp"><input data-o="${k}" value="${esc(off[k] || '')}" placeholder="${esc(ph || '')}"></span></label>`;
+    const cb = (k, l) => `<label class="chk w2"><input type="checkbox" data-o="${k}"${off[k] ? ' checked' : ''}> <span>${l}</span></label>`;
     $('#offBox').innerHTML = `
+      ${tx('client', 'Klienti', 'emri ose firma')}
+      ${tx('site', 'Vendndodhja', 'qyteti / adresa')}
+      <label class="f"><span class="fl">Nr. i ofertës</span><span class="inp"><input data-o="offerNo" value="${esc(off.offerNo)}" placeholder="${esc(autoNo())}"></span></label>
       <label class="f"><span class="fl">Marzhi</span><span class="inp"><input type="number" step="0.5" data-o="margin" value="${off.margin != null ? off.margin : (prices && prices.margin) || 0}"><span class="u">%</span></span></label>
       <label class="f"><span class="fl">Monedha</span><span class="inp"><select data-o="currency"><option value="EUR"${cur() === 'EUR' ? ' selected' : ''}>Euro</option><option value="ALL"${cur() === 'ALL' ? ' selected' : ''}>Lekë</option></select></span></label>
       <label class="f"><span class="fl">E vlefshme</span><span class="inp"><input type="number" step="1" data-o="validDays" value="${off.validDays}"><span class="u">ditë</span></span></label>
@@ -164,9 +181,11 @@
       <label class="f w2"><span class="fl">Pagesa</span><span class="inp"><textarea rows="2" data-o="pay">${esc(off.pay)}</textarea></span></label>
       <label class="f w2"><span class="fl">Përfshihen</span><span class="inp"><textarea rows="2" data-o="incl">${esc(off.incl)}</textarea></span></label>
       <label class="f w2"><span class="fl">Nuk përfshihen</span><span class="inp"><textarea rows="2" data-o="excl">${esc(off.excl)}</textarea></span></label>
-      <label class="f w2"><span class="fl">Shënim</span><span class="inp"><textarea rows="2" data-o="note">${esc(off.note)}</textarea></span></label>`;
+      <label class="f w2"><span class="fl">Shënim</span><span class="inp"><textarea rows="2" data-o="note">${esc(off.note)}</textarea></span></label>
+      ${cb('showVat', 'Trego TVSH-në dhe totalin me TVSH në ofertë')}
+      ${cb('showSave', 'Trego kursimin vjetor të energjisë (vetëm me panele)')}`;
     $$('#offBox [data-o]').forEach(x => x.addEventListener('change', () => {
-      const k = x.dataset.o; off[k] = x.type === 'number' ? parseFloat(String(x.value).replace(',', '.')) || 0 : x.value;
+      const k = x.dataset.o; off[k] = x.type === 'checkbox' ? x.checked : x.type === 'number' ? parseFloat(String(x.value).replace(',', '.')) || 0 : x.value;
       saveLocal(); compute();
     }));
   }
@@ -188,7 +207,8 @@
     try { res = E.design(inp, eng); } catch (e) { console.error(e); return; }
     cost = prices ? PC.costs(res, prices, { margin: off.margin }) : null;
     renderChips(); renderCalc(); renderCost();
-    if (curTab === 'm3d' && ParkView3D.ready) ParkView3D.build(res);
+    if (curTab === 'm3d' && ParkView3D.ready) { ParkView3D.build(res); built = res; }
+    if (curTab === 'offer') renderOffer();
     if (curTab === 'plan') $('#drPlan').innerHTML = ParkPlan(res);
   }
   function renderChips() {
@@ -214,19 +234,79 @@
     h += `<p class="muted small">Paradimensionim i thjeshtuar për ofertë (EN 1991-1-3/-4, EN 1993-1-1). Para prodhimit duhet llogaritja e plotë e zbatimit.</p>`;
     $('#calcBox').innerHTML = h;
   }
+  /* ---------- analiza e kostos ---------- */
+  const COVER_ORDER = ['pv', 'sheet', 'sandwich', 'poly'];
+  const yrs = v => v >= 40 ? 'mbi 40 vjet' : fmt(v, 1) + ' vjet';
+  // i njëjti parking me mbulesa të tjera, dhe vetëm struktura + mbulesa pa opsione
+  function variants() {
+    const run = (o, name, cur) => { try { const r = E.design(Object.assign({}, inp, o), eng), c = PC.costs(r, prices, { margin: off.margin }); return { name, r, c, cur, o }; } catch (e) { return null; } };
+    const v = COVER_ORDER.map(c => run({ cover: c }, E.COVERS[c].name, c === inp.cover));
+    v.push(run({ ev: 0, led: false, gutter: false, closure: 'none', battery: 0 }, 'Pa opsione (' + E.COVERS[inp.cover].name.toLowerCase() + ')', false));
+    return v.filter(Boolean);
+  }
+  function basisInfo() {
+    const b = off.tBasis || 'space', n = res.geo.spaces, kwp = res.pv ? res.pv.kWp : 0;
+    if (b === 'total') return { b, label: 'Çmimi total', unit: cur() === 'ALL' ? 'Lekë' : '€', mul: 1, now: cost.price };
+    if (b === 'kwp' && kwp) return { b, label: 'Çmimi për kWp', unit: (cur() === 'ALL' ? 'Lekë' : '€') + '/kWp', mul: kwp, now: cost.price / kwp };
+    if (b === 'm2') return { b, label: 'Çmimi për m²', unit: (cur() === 'ALL' ? 'Lekë' : '€') + '/m²', mul: res.geo.area, now: cost.price / res.geo.area };
+    return { b: 'space', label: 'Çmimi për vend', unit: (cur() === 'ALL' ? 'Lekë' : '€') + '/vend', mul: n, now: cost.price / n };
+  }
   function renderCost() {
     const box = $('#costBox');
     if (!cost) { box.innerHTML = '<p class="muted">Çmimet nuk janë ngarkuar.</p>'; return; }
-    let h = `<table class="ctab"><tr><th>Zëri</th><th class="n">Sasia</th><th class="n">Çmimi</th><th class="n">Vlera</th></tr>`;
-    cost.rows.forEach(g => {
-      h += `<tr class="grp"><td colspan="3">${esc(g.g)}</td><td class="n">${money(g.sum)}</td></tr>`;
-      g.items.forEach(x => { h += `<tr><td>${esc(x[0])}</td><td class="n">${fmt(x[1], x[1] < 100 ? 1 : 0)} ${esc(x[2])}</td><td class="n">${amt(x[4], x[4] < 10 ? 2 : 0)}</td><td class="n">${money(x[3])}</td></tr>`; });
+    if (curTab !== 'cost') return;
+    const r = res, g = r.geo, c = cost, en = c.energy, profit = c.price - c.cost;
+    let h = `<div class="mini">
+      <div class="m hl"><div class="l">Çmimi i ofertës pa TVSH</div><div class="v">${money(c.price)}</div></div>
+      <div class="m"><div class="l">Kosto totale</div><div class="v">${money(c.cost)}</div></div>
+      <div class="m"><div class="l">Fitimi</div><div class="v">${money(profit)} <small>${f1(c.realMargin)}%</small></div></div>
+      <div class="m"><div class="l">Për vend parkimi</div><div class="v">${money(c.perSpace)}</div></div>
+      ${c.perKWp ? `<div class="m"><div class="l">Për kWp</div><div class="v">${money(c.perKWp)}</div></div>` : ''}
+      <div class="m"><div class="l">Për m² strehë</div><div class="v">${money(c.price / g.area, cur() === 'EUR' ? 1 : 0)}</div></div>
+      <div class="m"><div class="l">Çeliku</div><div class="v">${fmt(r.qty.steel / 1000, 2)} t <small>${f1(r.qty.steel / g.area)} kg/m²</small></div></div>
+      <div class="m"><div class="l">Kosto e çelikut / kg</div><div class="v">${fmt(c.steelRate * rate(), cur() === 'EUR' ? 2 : 0)} ${cur() === 'ALL' ? 'Lekë' : '€'}</div></div>
+    </div>`;
+    const bi = basisInfo();
+    const opt = (v, l) => `<option value="${v}"${bi.b === v ? ' selected' : ''}>${l}</option>`;
+    h += `<div class="cards">
+      <section class="card"><h3>Fitimi për këtë ofertë</h3>
+        <div class="engf">
+          <label class="f"><span class="fl">Marzhi mbi koston</span><span class="inp"><input type="number" id="cMargin" step="0.5" value="${f1(c.margin).replace(',', '.')}"><span class="u">%</span></span><small class="hint">standardi: ${f1(+prices.margin || 0)}% · fitimi në çmim: ${f1(c.realMargin)}%</small></label>
+          <label class="f"><span class="fl">Çmimi i synuar sipas</span><span class="inp"><select id="cBasis">${opt('space', 'vendit të parkimit')}${opt('total', 'totalit')}${opt('m2', 'm² strehë')}${r.pv ? opt('kwp', 'kWp diellor') : ''}</select></span></label>
+          <label class="f w2"><span class="fl">${bi.label} i synuar</span><span class="inp"><input type="number" id="cTarget" step="1" placeholder="${fmt(bi.now * rate(), 0).replace(/\./g, '')}"><span class="u">${bi.unit}</span></span><small class="hint" id="cHint">shkruaj çmimin që do t'i japësh klientit dhe shiko fitimin</small></label>
+          <div class="row w2"><button class="btn sm pri" id="cApply" type="button">Përdor çmimin e synuar</button><button class="btn sm" id="cReset" type="button">Kthe marzhin standard</button></div>
+        </div></section>
+      <section class="card"><h3>Ku shkojnë paratë</h3>${shareBars()}</section>
+    </div>`;
+    const vs = variants(), best = Math.min.apply(null, vs.map(v => v.c.price));
+    h += `<div class="cards">
+      <section class="card wide"><h3>Variantet për të njëjtin parking</h3><table class="ctab"><tr><th>Varianti</th><th class="n">Çmimi</th><th class="n">Për vend</th><th class="n">Çeliku</th><th></th></tr>${vs.map((v, k) => `<tr class="${v.cur ? 'curv' : ''}"><td>${esc(v.name)}${v.r.pv ? ` <small class="muted">${f1(v.r.pv.kWp)} kWp</small>` : ''}</td><td class="n">${money(v.c.price)}</td><td class="n">${money(v.c.perSpace)}</td><td class="n">${fmt(v.r.qty.steel, 0)} kg</td><td class="n">${v.cur ? '<small class="muted">aktuali</small>' : k < COVER_ORDER.length ? `<button class="btn sm" data-cover="${COVER_ORDER[k]}" type="button">Zgjidh</button>` : ''}</td></tr>`).join('')}</table><p class="muted small">Me të njëjtat përmasa, opsione dhe marzh. Diferenca nga më i liri: ${money(c.price - best)}.</p></section>
+      <section class="card"><h3>Pesha e strukturës</h3><dl class="kv">${[['Trarët e çatisë', r.kg.purlins], ['Trarët kryesorë', r.kg.beams], ['Kolonat', r.kg.cols], ['Kontraventimet', r.kg.brace], ['Lidhjet, pllakat, bulonat', r.kg.conn], ['Skeleti i mbylljes', r.opts.closure ? r.opts.closure.railKg : 0]].filter(x => x[1] > 0.5).map(x => `<dt>${x[0]}</dt><dd>${fmt(x[1], 0)} kg</dd>`).join('')}<dt><b>Gjithsej</b></dt><dd><b>${fmt(r.qty.steel, 0)} kg</b></dd><dt>Për vend parkimi</dt><dd>${fmt(r.qty.perSpace, 0)} kg</dd><dt>Kamionë · ditë autovinç</dt><dd>${c.trucks} · ${c.days}</dd></dl></section>
+      ${en ? `<section class="card"><h3>Energjia dhe kthimi i investimit</h3><dl class="kv"><dt>Prodhimi i vlerësuar</dt><dd>${fmt(en.kwh, 0)} kWh/vit</dd><dt>Tarifa e biznesit (0,4 kV)</dt><dd>${fmt(en.tariff, 1)} Lekë/kWh</dd><dt>Kursimi vjetor</dt><dd>${money(en.save)}</dd><dt>Sistemi diellor në ofertë</dt><dd>${money(en.pvPrice)}</dd><dt>Kthimi i sistemit diellor</dt><dd>${yrs(en.payPv)}</dd><dt>Kthimi i gjithë investimit</dt><dd>${yrs(en.payAll)}</dd></dl><p class="muted small">Supozim: e gjithë energjia konsumohet në objekt. Tarifa ndryshohet te «Çmimet».</p></section>` : ''}
+    </div>`;
+    h += `<section class="card"><h3>Preventivi i detajuar</h3><table class="ctab"><tr><th>Zëri</th><th class="n">Sasia</th><th class="n">Çmimi njësi</th><th class="n">Vlera</th><th class="n">%</th></tr>`;
+    c.rows.forEach(gr => {
+      h += `<tr class="grp"><td colspan="3">${esc(gr.g)}</td><td class="n">${money(gr.sum)}</td><td class="n">${fmt(gr.sum / c.cost * 100, 1)}</td></tr>`;
+      gr.items.forEach(x => { h += `<tr><td>${esc(x[0])}</td><td class="n">${fmt(x[1], x[1] < 100 ? 1 : 0)} ${esc(x[2])}</td><td class="n">${amt(x[4], x[4] < 10 ? 2 : 0)}</td><td class="n">${money(x[3])}</td><td class="n">${fmt(x[3] / c.cost * 100, 1)}</td></tr>`; });
     });
-    h += `<tr class="tot"><td colspan="3">Nëntotali</td><td class="n">${money(cost.sub)}</td></tr><tr><td colspan="3">Projekti</td><td class="n">${money(cost.design)}</td></tr><tr><td colspan="3">Të paparashikuara</td><td class="n">${money(cost.cont)}</td></tr>`;
-    h += `<tr class="tot"><td colspan="3">Kosto gjithsej</td><td class="n">${money(cost.cost)}</td></tr><tr><td colspan="3">Marzhi ${f1(cost.margin)}%</td><td class="n">${money(cost.price - cost.cost)}</td></tr>`;
-    h += `<tr class="fin"><td colspan="3">Çmimi pa TVSH</td><td class="n">${money(cost.price)}</td></tr><tr><td colspan="3">TVSH ${fmt(prices.vat || 0, 0)}%</td><td class="n">${money(cost.vat)}</td></tr><tr class="tot"><td colspan="3">Çmimi me TVSH</td><td class="n">${money(cost.total)}</td></tr></table>`;
-    h += `<p class="muted small">${money(cost.perSpace)} për vend parkimi${cost.perKWp ? ' · ' + money(cost.perKWp) + ' për kWp' : ''} · ${cost.trucks} kamion · ${cost.days} ditë autovinç</p>`;
+    h += `<tr class="tot"><td colspan="3">Kostot direkte</td><td class="n">${money(c.sub)}</td><td></td></tr><tr><td colspan="3">Projekti i zbatimit</td><td class="n">${money(c.design)}</td><td class="n">${fmt(c.design / c.cost * 100, 1)}</td></tr><tr><td colspan="3">Rezerva për të paparashikuara (${f1(+prices.contPct || 0)}%)</td><td class="n">${money(c.cont)}</td><td class="n">${fmt(c.cont / c.cost * 100, 1)}</td></tr>`;
+    h += `<tr class="tot"><td colspan="3">Kosto totale</td><td class="n">${money(c.cost)}</td><td class="n">100</td></tr><tr><td colspan="3">Fitimi (marzhi ${f1(c.margin)}%${+prices.round ? ', rrumbullakuar me ' + fmt(+prices.round, 0) + ' €' : ''})</td><td class="n">${money(profit)}</td><td></td></tr>`;
+    h += `<tr class="fin"><td colspan="3">Çmimi i ofertës pa TVSH</td><td class="n">${money(c.price)}</td><td></td></tr><tr><td colspan="3">TVSH ${fmt(+prices.vat || 0, 0)}%</td><td class="n">${money(c.vat)}</td><td></td></tr><tr class="tot"><td colspan="3">Çmimi me TVSH</td><td class="n">${money(c.total)}</td><td></td></tr></table></section>`;
     box.innerHTML = h;
+    // ngjarjet
+    $('#cMargin').addEventListener('change', e => { const v = parseFloat(String(e.target.value).replace(',', '.')); if (isFinite(v)) { off.margin = v; saveLocal(); renderOff(); compute(); } });
+    $('#cBasis').addEventListener('change', e => { off.tBasis = e.target.value; saveLocal(); renderCost(); });
+    const implied = v => { const b = basisInfo(); return (v / rate() * b.mul / c.cost - 1) * 100; };
+    const tg = $('#cTarget');
+    tg.addEventListener('input', () => { const v = parseFloat(String(tg.value).replace(',', '.')); $('#cHint').textContent = isFinite(v) && v > 0 ? `marzhi rezultues ${f1(implied(v))}% · çmimi total ${money(v / rate() * basisInfo().mul)} · fitimi ${money(v / rate() * basisInfo().mul - c.cost)}` : "shkruaj çmimin që do t'i japësh klientit dhe shiko fitimin"; });
+    $('#cApply').addEventListener('click', () => { const v = parseFloat(String(tg.value).replace(',', '.')); if (!(v > 0)) { toast('Shkruaj fillimisht çmimin e synuar.'); return; } const m = Math.round(implied(v) * 10) / 10; if (m < 0) toast('Kujdes: me këtë çmim punon me humbje (' + f1(m) + '%).'); off.margin = m; saveLocal(); renderOff(); compute(); toast('Marzhi u vendos ' + f1(m) + '%.'); });
+    $('#cReset').addEventListener('click', () => { off.margin = null; saveLocal(); renderOff(); compute(); });
+    $$('#costBox [data-cover]').forEach(b => b.addEventListener('click', () => setVal('cover', b.dataset.cover)));
+  }
+  function shareBars() {
+    const c = cost, parts = c.rows.map(g => [g.g, g.sum]).concat([['Projekti dhe rezerva', c.design + c.cont], ['Fitimi', c.price - c.cost]]);
+    const tot = c.price, mx = Math.max.apply(null, parts.map(p => p[1]));
+    return `<div class="bars">${parts.filter(p => p[1] > 0).map(p => `<div class="bar"><span class="bl">${esc(p[0])}</span><span class="bt"><i style="width:${(p[1] / mx * 100).toFixed(1)}%"${p[0] === 'Fitimi' ? ' class="pf"' : ''}></i></span><span class="bv">${money(p[1])}</span><span class="bp">${fmt(p[1] / tot * 100, 0)}%</span></div>`).join('')}</div><p class="muted small">Pjesa e secilit grup në çmimin pa TVSH.</p>`;
   }
 
   /* ---------- oferta për klientin ---------- */
@@ -239,7 +319,7 @@
     if (r.pv) d.push(['Sistemi diellor', `${r.pv.n} panele ${r.pv.Wp} Wp, gjithsej ${f2(r.pv.kWp)} kWp` + (r.opts.inverter ? `, inverter ${f1(r.opts.inverter.kw)} kW i lidhur në rrjet` : '') + (r.opts.battery ? `, bateri ${fmt(r.opts.battery.kwh, 0)} kWh` : '') + `; prodhimi i vlerësuar ${fmt(Math.round(r.pv.kwh / 100) * 100, 0)} kWh/vit`]);
     else d.push(['Mbulesa', `${r.cover.name}, ${f1(r.qty.coverArea)} m²`]);
     const o = [];
-    if (r.opts.ev) o.push(`${r.opts.ev.n} karikues ${f1(r.opts.ev.kw)} kW`);
+    if (r.opts.ev) o.push(`${r.opts.ev.n} karikues ${kwStr(r.opts.ev.kw)} kW`);
     if (r.opts.led) o.push(`${r.opts.led.n} ndriçues LED`);
     if (r.opts.gutter) o.push(`ulluqe ${fmt(r.opts.gutter.m, 0)} m me ${r.opts.gutter.down} zbritëse`);
     if (r.opts.closure) o.push(`mbyllje anësore ${f1(r.opts.closure.area)} m²`);
@@ -279,28 +359,113 @@
     toast('Oferta u publikua. Klienti mori email.'); renderBar(); refreshList();
   }
 
+  /* ---------- oferta si dokument (PDF, WhatsApp, imazh) ---------- */
+  const PRINT_PAL = { ink: '#18212a', dim: '#5d6b77', accent: '#d48c06', steel: '#2f6fa3', bg: '#ffffff', aisle: '#f1f4f6', ev: '#16a34a' };
+  function autoNo() {
+    if (current) return code(current) + '-v' + ((current.offer_version || 0) + 1);
+    const d = new Date(), p2 = n => String(n).padStart(2, '0');
+    return 'PRK-' + String(d.getFullYear()).slice(2) + p2(d.getMonth() + 1) + p2(d.getDate());
+  }
+  const safeName = t => String(t || '').replace(/[\\/:*?"<>|]+/g, '-').trim().slice(0, 80);
+  function offerData() {
+    const r = res, g = r.geo, c = cost, i = r.inp, en = c.energy;
+    const d0 = new Date(), vd = off.validDays || 30, dv = new Date(d0.getTime() + vd * 864e5);
+    const curLabel = cur() === 'ALL' ? 'Lekë' : '€';
+    const desc = describe();
+    if (en && off.showSave) desc.push(['Prodhimi dhe kursimi', `Rreth ${fmt(Math.round(en.kwh / 100) * 100, 0)} kWh energji në vit. Me tarifën e biznesit ${fmt(en.tariff, 0)} Lekë/kWh (0,4 kV) kjo vlen rreth ${money(Math.round(en.save / 10) * 10)} në vit, kur energjia konsumohet në objekt; investimi i plotë kthehet për rreth ${fmt(Math.round(en.payAll * 2) / 2, 1)} vjet.`]);
+    const priceRows = c.rows.map(gr => [gr.g === 'Transporti dhe mjetet' ? 'Transporti dhe autovinçi' : gr.g, amt(gr.sum * c.kf)]);
+    const vat = +prices.vat || 0;
+    const totals = off.showVat ? [['Totali pa TVSH', amt(c.price), false], ['TVSH ' + fmt(vat, 0) + '%', amt(c.vat), false], ['Totali me TVSH', amt(c.total), true]] : [['Totali (pa TVSH)', amt(c.price), true]];
+    const figs = [['Vende parkimi', g.spaces + ' makina'], ['Sipërfaqja e mbuluar', fmt(g.area, 0) + ' m²'], r.pv ? ['Fuqia diellore', f1(r.pv.kWp) + ' kWp'] : ['Lartësia e lirë', f2(i.H) + ' m'], ['Çmimi pa TVSH', money(c.price)]];
+    const s = E.summary(inp, r);
+    return {
+      company, projectName: s.title, title: s.title, subtitle: `${f1(g.L)} × ${f1(g.D)} m · lartësia e lirë ${f2(i.H)} m · ${i.city}`, desc, priceRows, totals, figs, curLabel,
+      offer: { no: off.offerNo || autoNo(), dateStr: dstr(d0), validStr: dstr(dv), validDays: vd, client: off.client, site: off.site, lead: off.lead, pay: off.pay, incl: off.incl, excl: off.excl },
+      kgLine: 'Çmimi për vend parkimi: ' + money(c.perSpace) + ' pa TVSH' + (r.pv ? ' · ' + money(c.perKWp) + ' për kWp' : '') + '.',
+      note: off.note
+    };
+  }
+  function ensure3D() { if (ParkView3D.ready && built !== res) { ParkView3D.build(res); built = res; } }
+  function shot() { ensure3D(); try { return ParkView3D.snapshot(1600, 900); } catch (e) { console.warn(e); return null; } }
+  function renderOffer() {
+    if (!res || !cost) { $('#offerPrev').innerHTML = '<p class="muted">Çmimet nuk janë ngarkuar.</p>'; return; }
+    const o = offerData(), img = shot();
+    let h = `<article class="sheet"><div class="sh-band"><div><b>${esc(o.company.name || 'Oni-El')}</b><small>${esc([o.company.addr, o.company.phone, o.company.email].filter(Boolean).join(' · '))}</small></div><div class="r"><b>OFERTË</b><br>Nr. ${esc(o.offer.no)} · ${o.offer.dateStr}<br>E vlefshme deri më ${o.offer.validStr}</div></div><div class="sh-body">`;
+    h += `<div class="who"><div><div class="l">Për</div><b>${esc(o.offer.client || '—')}</b>${o.offer.site ? 'Vendndodhja: ' + esc(o.offer.site) : ''}</div><div><div class="l">Objekti</div><b>${esc(o.title)}</b>${esc(o.subtitle)}</div></div>`;
+    if (img) h += `<img class="shot" alt="Modeli 3D i strehës së parkingut" src="${img}">`;
+    h += `<div class="figs">${o.figs.map(f => `<div><div class="l">${f[0]}</div><div class="v">${esc(f[1])}</div></div>`).join('')}</div>`;
+    h += `<div><h4>Përshkrimi teknik</h4><table>${o.desc.map(d => `<tr><td>${esc(d[0])}</td><td>${esc(d[1])}</td></tr>`).join('')}</table></div>`;
+    h += `<div><h4>Planimetria</h4><div class="drs">${ParkPlan(res, PRINT_PAL)}</div></div>`;
+    h += `<div><h4>Oferta ekonomike</h4><table class="pr">${o.priceRows.map(r => `<tr><td>${esc(r[0])}</td><td>${r[1]} ${o.curLabel}</td></tr>`).join('')}${o.totals.map(t => `<tr class="${t[2] ? 'tfin' : 'tsub'}"><td>${t[0]}</td><td>${t[1]} ${o.curLabel}</td></tr>`).join('')}</table><p class="note">${esc(o.kgLine)}</p></div>`;
+    h += `<div><h4>Kushtet</h4><table><tr><td>Afati</td><td>${esc(o.offer.lead)}</td></tr><tr><td>Pagesa</td><td>${esc(o.offer.pay)}</td></tr><tr><td>Përfshihen</td><td>${esc(o.offer.incl)}</td></tr><tr><td>Nuk përfshihen</td><td>${esc(o.offer.excl)}</td></tr></table></div>${o.note ? `<p class="note">${esc(o.note)}</p>` : ''}`;
+    h += `</div></article>`;
+    $('#offerPrev').innerHTML = h;
+    const c = cost;
+    $('#offerCheck').innerHTML = `<dt>Kosto totale</dt><dd>${money(c.cost)}</dd><dt>Fitimi</dt><dd>${money(c.price - c.cost)} (${f1(c.realMargin)}%)</dd><dt>Për vend</dt><dd>${money(c.perSpace)}</dd><dt>Çeliku</dt><dd>${fmt(res.qty.steel, 0)} kg</dd><dt>Kamionë</dt><dd>${c.trucks}</dd>` + (res.ok ? '' : '<dt class="bad">Kontrolli</dt><dd class="bad">Nuk kalon</dd>');
+  }
+  // SVG → PNG; minAsp shton hapësirë anash që vizatimi të mos zërë gjithë faqen
+  function svgPNG(svg, scale, minAsp) {
+    return new Promise((ok, ko) => {
+      const vb = (svg.match(/viewBox="([^"]+)"/) || [])[1].split(/\s+/).map(Number), w = Math.round(vb[2] * (scale || 2)), h = Math.round(vb[3] * (scale || 2));
+      const W = Math.max(w, Math.round(h * (minAsp || 0)));
+      const img = new Image();
+      img.onload = () => { const cv = document.createElement('canvas'); cv.width = W; cv.height = h; const x = cv.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, W, h); x.drawImage(img, (W - w) / 2, 0, w, h); ok({ url: cv.toDataURL('image/png'), w: W, h }); };
+      img.onerror = ko;
+      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg.replace('<svg ', `<svg width="${w}" height="${h}" `));
+    });
+  }
+  function download(name, blob) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); }
+  async function offerPDF() {
+    if (!res || !cost || !window.OfferPDF) return;
+    const btn = $('#bPdf'); btn.disabled = true; btn.textContent = 'Duke përgatitur PDF…';
+    try {
+      const o = offerData();
+      const draws = [await svgPNG(ParkPlan(res, PRINT_PAL), 1.6, 3)];
+      const buf = OfferPDF.build(Object.assign(o, { img3d: shot(), img3dRatio: 16 / 9, draws }));
+      download('Oferta ' + safeName(o.offer.no) + ' - ' + safeName(o.offer.client || o.title) + '.pdf', new Blob([buf], { type: 'application/pdf' }));
+    } catch (e) { console.error(e); toast('PDF-ja nuk u krijua: ' + (e.message || e)); }
+    btn.disabled = false; btn.textContent = 'Shkarko ofertën (PDF)';
+  }
+  function waText() {
+    const o = offerData(), r = res, c = cost, en = c.energy, L = [];
+    L.push(`*${o.title}* · ${company.name || 'Oni-El'}`);
+    if (o.offer.client) L.push('Për: ' + o.offer.client);
+    L.push(`${r.geo.spaces} vende parkimi · ${o.subtitle}`);
+    L.push(`Struktura: kolona ${r.col.sec.name}, trarë ${r.beam.sec.name}, ${eng.coat === 'paint' ? 'e lyer' : 'e zinkuar në të nxehtë'}`);
+    L.push(r.pv ? `Panele diellore: ${r.pv.n} × ${r.pv.Wp} Wp = ${f1(r.pv.kWp)} kWp, rreth ${fmt(Math.round(r.pv.kwh / 100) * 100, 0)} kWh/vit` : 'Mbulesa: ' + r.cover.name.toLowerCase());
+    const op = []; if (r.opts.ev) op.push(r.opts.ev.n + ' karikues ' + kwStr(r.opts.ev.kw) + ' kW'); if (r.opts.battery) op.push('bateri ' + fmt(r.opts.battery.kwh, 0) + ' kWh'); if (r.opts.led) op.push('ndriçim LED'); if (r.opts.closure) op.push('mbyllje anësore');
+    if (op.length) L.push('Opsione: ' + op.join(', '));
+    L.push(`*Çmimi: ${money(c.price)} pa TVSH* (${money(c.perSpace)} për vend)`);
+    if (en && off.showSave) L.push(`Kursimi i energjisë: rreth ${money(Math.round(en.save / 10) * 10)} në vit`);
+    L.push(`Afati: ${off.lead} · Oferta e vlefshme deri më ${o.offer.validStr}`);
+    return L.join('\n');
+  }
+  async function copyWa() { const t = waText(); try { await navigator.clipboard.writeText(t); toast('Teksti u kopjua. Ngjite në WhatsApp.'); } catch (e) { prompt('Kopjo tekstin:', t); } }
+  function saveJPG() { const u = shot(); if (!u) { toast('Modeli 3D nuk është gati.'); return; } fetch(u).then(r => r.blob()).then(b => download('Parking 3D - ' + safeName(off.client || E.summary(inp, res).title) + '.jpg', b)); }
+
   /* ---------- PDF i kostove të brendshme ---------- */
   async function costPDF() {
     if (!cost || !window.OfferPDF) return;
     const btn = $('#bCostPdf'); btn.disabled = true; btn.textContent = 'Duke përgatitur…';
     try {
       const s = E.summary(inp, res), today = dstr(new Date());
-      let img = null;
-      if (ParkView3D.ready) { const prev = curTab; if (prev !== 'm3d') showTab('m3d'); await new Promise(r => setTimeout(r, 250)); const url = ParkView3D.snapshot(); if (url) { const c = $('#viewer canvas'); img = { url, w: c.width, h: c.height }; } if (prev !== 'm3d') showTab(prev); }
+      const u3 = shot(), img = u3 ? { url: u3, w: 1600, h: 900, fmt: 'JPEG' } : null;
       const rows = [];
       cost.rows.forEach(g => { rows.push({ c: [g.g, '', '', amt(g.sum)], grp: 1 }); g.items.forEach(x => rows.push([x[0], fmt(x[1], x[1] < 100 ? 1 : 0) + ' ' + x[2], amt(x[4], x[4] < 10 ? 2 : 0), amt(x[3])])); });
       rows.push({ c: ['Nëntotali', '', '', amt(cost.sub)], tot: 1 }, ['Projekti', '', '', amt(cost.design)], ['Të paparashikuara', '', '', amt(cost.cont)], { c: ['Kosto gjithsej', '', '', amt(cost.cost)], tot: 1 }, ['Marzhi ' + f1(cost.margin) + '%', '', '', amt(cost.price - cost.cost)], { c: ['Çmimi pa TVSH', '', '', amt(cost.price)], fin: 1 }, ['TVSH', '', '', amt(cost.vat)], { c: ['Çmimi me TVSH', '', '', amt(cost.total)], tot: 1 });
       const blocks = [
-        { h: 'Përmbledhja', kv: [['Çmimi pa TVSH', money(cost.price)], ['Kosto gjithsej', money(cost.cost)], ['Marzhi', f1(cost.margin) + '% · ' + money(cost.price - cost.cost)], ['Për vend parkimi', money(cost.perSpace)]].concat(cost.perKWp ? [['Për kWp', money(cost.perKWp)]] : []).concat([['Çeliku', fmt(res.qty.steel, 0) + ' kg · ' + f1(res.qty.steel / res.geo.area) + ' kg/m²']]) },
+        { h: 'Përmbledhja', kv: [['Çmimi pa TVSH', money(cost.price)], ['Kosto gjithsej', money(cost.cost)], ['Fitimi', money(cost.price - cost.cost) + ' · marzhi ' + f1(cost.margin) + '% mbi koston (' + f1(cost.realMargin) + '% e çmimit)'], ['Për vend parkimi', money(cost.perSpace)]].concat(cost.perKWp ? [['Për kWp', money(cost.perKWp)]] : []).concat([['Për m² strehë', money(cost.price / res.geo.area, 1)], ['Çeliku', fmt(res.qty.steel, 0) + ' kg · ' + f1(res.qty.steel / res.geo.area) + ' kg/m² · ' + money(cost.steelRate, 2) + '/kg'], ['Transporti', cost.trucks + ' kamion · ' + cost.days + ' ditë autovinç']]) },
+        { h: 'Variantet për të njëjtin parking', table: { head: ['Varianti', 'Çmimi pa TVSH', 'Për vend', 'Çeliku (kg)'], widths: [80, 36, 34, 30], right: [0, 1, 1, 1], rows: variants().map(v => (v.cur ? { c: [v.name + ' (aktuali)', amt(v.c.price), amt(v.c.perSpace), fmt(v.r.qty.steel, 0)], tot: 1 } : [v.name, amt(v.c.price), amt(v.c.perSpace), fmt(v.r.qty.steel, 0)])) } },
         { h: 'Preventivi i detajuar (' + (cur() === 'ALL' ? 'Lekë' : '€') + ')', table: { head: ['Zëri', 'Sasia', 'Çmimi', 'Vlera'], widths: [92, 34, 26, 28], right: [0, 1, 1, 1], rows } },
         { h: 'Elementet', util: [['Trarët e çatisë', res.purlin.sec.name, res.purlin.u, res.purlin.gov], ['Trau kryesor', res.beam.sec.name, res.beam.u, res.beam.gov], ['Kolona', res.col.sec.name, res.col.u, res.col.gov]] },
         { h: 'Përshkrimi', kv: describe() }
       ];
+      const en = cost.energy;
+      if (en) blocks.splice(3, 0, { h: 'Energjia dhe kthimi i investimit', kv: [['Prodhimi i vlerësuar', fmt(en.kwh, 0) + ' kWh/vit'], ['Tarifa e biznesit (0,4 kV)', fmt(en.tariff, 1) + ' Lekë/kWh'], ['Kursimi vjetor', money(en.save)], ['Sistemi diellor në ofertë', money(en.pvPrice)], ['Kthimi i sistemit diellor', yrs(en.payPv)], ['Kthimi i gjithë investimit', yrs(en.payAll)]] });
       if (img) blocks.push({ h: 'Pamja 3D', img });
       blocks.push({ list: ['Dokument i brendshëm i Oni-El. Mos ia dërgo klientit.'] });
-      const buf = OfferPDF.report({ company: { name: 'Oni-El', addr: 'Elbasan, Shqipëri', phone: '+355 68 315 5705' }, docTitle: 'KOSTOT E BRENDSHME', docSub: 'Konfidenciale · ' + today, footTitle: 'Kostot e brendshme', dateStr: today, no: current ? code(current) : '', title: s.title, subtitle: s.text, client: current ? (current.company ? current.company + ' (' + current.name + ')' : current.name) : '', site: current ? current.site : '', project: s.title, blocks });
-      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([buf], { type: 'application/pdf' }));
-      a.download = (current ? code(current) + '_' : '') + 'Parking_kostot_e_brendshme.pdf'; document.body.appendChild(a); a.click(); a.remove();
+      const buf = OfferPDF.report({ company, docTitle: 'KOSTOT E BRENDSHME', docSub: 'Konfidenciale · ' + today, footTitle: 'Kostot e brendshme', dateStr: today, no: current ? code(current) : '', title: s.title, subtitle: offerData().subtitle, client: off.client || '', site: off.site || '', project: s.title, blocks });
+      download('Kostot e brendshme - ' + safeName(current ? code(current) + ' ' + (off.client || '') : off.client || s.title) + '.pdf', new Blob([buf], { type: 'application/pdf' }));
     } catch (e) { console.error(e); toast('PDF dështoi: ' + e.message); }
     btn.disabled = false; btn.textContent = 'Shkarko PDF';
   }
@@ -309,8 +474,10 @@
   function showTab(t) {
     curTab = t;
     $$('.vtabs button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.t === t)));
-    ['m3d', 'plan', 'calc', 'cost'].forEach(k => { $('#pane-' + k).hidden = k !== t; });
-    if (t === 'm3d') { ParkView3D.resize(); if (res) ParkView3D.build(res); } else if (t === 'plan' && res) $('#drPlan').innerHTML = ParkPlan(res);
+    ['m3d', 'plan', 'calc', 'cost', 'offer'].forEach(k => { $('#pane-' + k).hidden = k !== t; });
+    $('.viz').classList.toggle('long', t === 'cost' || t === 'offer' || t === 'calc');
+    if (t === 'm3d') { ParkView3D.resize(); if (res) { ParkView3D.build(res); built = res; } } else if (t === 'plan' && res) $('#drPlan').innerHTML = ParkPlan(res);
+    else if (t === 'cost') renderCost(); else if (t === 'offer') renderOffer();
   }
   async function init() {
     const c = client();
@@ -318,7 +485,7 @@
     const { data } = await c.auth.getSession();
     if (!data.session || !(await isAdmin())) await loginUI();
     $('#app').hidden = false;
-    await loadPrices();
+    await Promise.all([loadPrices(), loadCompany()]);
     const fr = LSget('park.free'); if (fr) { inp = Object.assign(clone(E.DEF), fr.inp); eng = Object.assign(clone(E.ENG), fr.eng); off = Object.assign(clone(OFFER_DEF), fr.off); }
     form = ParkForm.mount($('#cfgSteps'), { get: () => inp, set: setVal, editable: () => true });
     ParkView3D.init($('#viewer'));
@@ -333,6 +500,9 @@
     $('#bPrSave').addEventListener('click', savePrices);
     $$('[data-close]').forEach(b => b.addEventListener('click', () => b.closest('dialog').close()));
     $('#bCostPdf').addEventListener('click', costPDF);
+    $('#bPdf').addEventListener('click', offerPDF);
+    $('#bWa').addEventListener('click', copyWa);
+    $('#bJpg').addEventListener('click', saveJPG);
     $('#bNew').addEventListener('click', () => { current = null; setBar(''); history.replaceState(null, '', location.pathname); inp = clone(E.DEF); eng = clone(E.ENG); off = clone(OFFER_DEF); form.refresh(); renderEng(); renderOff(); compute(); });
     $('#bLogout').addEventListener('click', async () => { await client().auth.signOut(); location.reload(); });
     compute();
@@ -342,5 +512,5 @@
     setInterval(refreshList, 120000);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
-  window.ParkAdmin = { get inp() { return inp; }, get res() { return res; }, get cost() { return cost; }, setVal, buildOffer: () => buildOffer(), openRequest: id => openRequest(list.find(x => x.id === id)) };
+  window.ParkAdmin = { get inp() { return inp; }, get res() { return res; }, get cost() { return cost; }, get off() { return off; }, setVal, buildOffer: () => buildOffer(), offerData: () => offerData(), waText: () => waText(), showTab: t => showTab(t), openRequest: id => openRequest(list.find(x => x.id === id)) };
 })();

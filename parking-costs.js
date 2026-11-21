@@ -10,7 +10,8 @@
     ['Ulluqe dhe mbyllje', [['gutter', 'Ulluk', '€/m'], ['down', 'Ulluk zbritës', '€/m'], ['closeSheet', 'Mbyllje me llamarinë', '€/m²'], ['closeSandwich', 'Mbyllje me panel sanduiç', '€/m²'], ['closePoly', 'Mbyllje me polikarbonat', '€/m²'], ['closeMont', 'Montimi i mbylljes', '€/m²']]],
     ['Themelet', [['concrete', 'Betoni', '€/m³'], ['rebar', 'Hekuri', '€/kg'], ['excav', 'Gërmimi dhe largimi', '€/m³'], ['anchorM20', 'Ankera M20, kompleti', '€'], ['anchorM24', 'Ankera M24, kompleti', '€'], ['anchorM27', 'Ankera M27, kompleti', '€']]],
     ['Transporti dhe mjetet', [['truck', 'Kamioni', '€/udhëtim'], ['truckKg', 'Ngarkesa e kamionit', 'kg'], ['crane', 'Autovinçi', '€/ditë'], ['tPerDay', 'Montim në ditë', 't/ditë']]],
-    ['Totali', [['designPct', 'Projekti', '%'], ['designMin', 'Projekti, minimumi', '€'], ['contPct', 'Të paparashikuara', '%'], ['margin', 'Marzhi', '%'], ['round', 'Rrumbullakimi', '€'], ['vat', 'TVSH', '%'], ['eurAll', 'Kursi', 'Lekë/€']]]
+    ['Totali', [['designPct', 'Projekti', '%'], ['designMin', 'Projekti, minimumi', '€'], ['contPct', 'Të paparashikuara', '%'], ['margin', 'Marzhi', '%'], ['round', 'Rrumbullakimi', '€'], ['vat', 'TVSH', '%'], ['eurAll', 'Kursi', 'Lekë/€']]],
+    ['Energjia', [['tariff', 'Tarifa e energjisë për biznes (0,4 kV)', 'Lekë/kWh']]]
   ];
   const EV_KEY = { 7.4: 'ev7', 11: 'ev11', 22: 'ev22' };
 
@@ -73,7 +74,18 @@
     const rd = p('round');
     if (rd > 0) price = Math.ceil(price / rd) * rd;
     const vat = price * p('vat') / 100;
-    return { rows, sub, design, cont, cost, margin, price, vat, total: price + vat, perSpace: price / Math.max(1, res.geo.spaces), perKWp: res.pv ? price / Math.max(0.1, res.pv.kWp) : null, trucks, days, mass, missing: !(p('stMat') > 0) };
+    // ndarja e çmimit sipas grupeve (projekti, rezerva dhe fitimi shpërndahen në mënyrë proporcionale)
+    const kf = price / Math.max(1, sub);
+    const grpPrice = g => { const r = rows.find(x => x.g === g); return r ? r.sum * kf : 0; };
+    // energjia: kursimi vjetor me tarifën e biznesit, nëse energjia konsumohet në objekt
+    let energy = null;
+    if (res.pv) {
+      const tariff = p('tariff') || 14, eur = p('eurAll') || 98, save = res.pv.kwh * tariff / eur;
+      const pvPrice = grpPrice('Sistemi fotovoltaik');
+      energy = { kwh: res.pv.kwh, tariff, save, pvPrice, payPv: pvPrice / Math.max(1, save), payAll: price / Math.max(1, save) };
+    }
+    const steelRate = p('stMat') + p('stFab') + coat + p('stMont');
+    return { rows, sub, design, cont, cost, margin, price, vat, total: price + vat, kf, energy, steelRate, steelCost: kg * steelRate, realMargin: (price - cost) / Math.max(1, price) * 100, perSpace: price / Math.max(1, res.geo.spaces), perKWp: res.pv ? price / Math.max(0.1, res.pv.kWp) : null, trucks, days, mass, missing: !(p('stMat') > 0) };
   }
   root.ParkCosts = { KEYS, costs };
 })(typeof window !== 'undefined' ? window : globalThis);

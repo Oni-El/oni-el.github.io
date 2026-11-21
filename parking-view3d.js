@@ -278,7 +278,7 @@ window.ParkView3D = (function () {
     fit(res);
     dirty = true;
   }
-  let view = 'iso';
+  let view = 'iso', zoom = 1;
   function fit(res) {
     // kabina e inverterit/baterive në skaj hyn në kuadër
     const g = res.geo, eq = res.opts && (res.opts.inverter || res.opts.battery) ? 2.2 : 0, cx = (g.L + eq) / 2, cz = g.D / 2, R = Math.max(g.L + eq, g.D, 8);
@@ -286,7 +286,7 @@ window.ParkView3D = (function () {
     controls.target.set(cx, ty, cz);
     // në ekrane të ngushta (celular) kamera largohet që modeli të hyjë i tëri në gjerësi
     const asp = camera.aspect, k = asp < 1 ? 1.1 / Math.max(0.5, asp) : (view === 'iso' && asp > 1.2 ? 0.85 : 1);
-    const d = (R * 1.15 + 4) * k;
+    const d = (R * 1.15 + 4) * k * zoom;
     if (view === 'front') camera.position.set(cx, g.hmax * 0.8, g.D + d);
     else if (view === 'side') camera.position.set(g.L + d, g.hmax * 0.9, cz);
     else if (view === 'top') camera.position.set(cx + 0.01, d * 1.5, cz + 0.01);
@@ -320,21 +320,35 @@ window.ParkView3D = (function () {
     else { scene.background = new THREE.Color(dayBg); hemi.intensity = 0.75; hemi.color.setHex(0xdfe8f5); sun.intensity = 0.95; sun.color.setHex(0xffffff); }
     if (last) build(last); dirty = true;
   }
-  function snapshot() { if (!ready) return null; renderer.render(scene, camera); return renderer.domElement.toDataURL('image/png'); }
+  // pamja aktuale; me w,h jep JPEG me atë madhësi (për ofertën PDF), me kuadër të rregulluar për atë format
+  function snapshot(w, h) {
+    if (!ready) return null;
+    if (!w) { renderer.render(scene, camera); return renderer.domElement.toDataURL('image/png'); }
+    const oa = camera.aspect, pr = renderer.getPixelRatio();
+    renderer.setPixelRatio(1); renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix();
+    zoom = view === 'iso' ? 0.78 : 0.9; if (last) fit(last); zoom = 1;
+    renderer.render(scene, camera);
+    const url = renderer.domElement.toDataURL('image/jpeg', 0.9);
+    renderer.setPixelRatio(pr); camera.aspect = oa; camera.updateProjectionMatrix(); resize(); if (last) fit(last);
+    return url;
+  }
   return { init, build, resize, setView, setCars, setNight, snapshot, look, get ready() { return ready; }, get night() { return night; } };
 })();
 
 /* Planimetria (SVG) nga lart: vendet, kolonat, korsitë, streha */
 window.ParkPlan = function (res, pal) {
   const i = res.inp, g = res.geo, P = pal || {};
-  const ink = P.ink || '#e8eaf0', dim = P.dim || '#8392a6', acc = P.accent || '#f4a012', st = P.steel || '#7fb0d8', bg = P.bg || '#162030';
+  const ink = P.ink || '#e8eaf0', dim = P.dim || '#8392a6', acc = P.accent || '#f4a012', st = P.steel || '#7fb0d8', bg = P.bg || '#162030', ais = P.aisle || 'rgba(255,255,255,.04)', evc = P.ev || '#22c55e';
+  // vendet me karikues, njësoj si në modelin 3D
+  const all = []; g.carRows.forEach((r, ri) => { for (let j = 0; j < i.nSpaces; j++) all.push(ri + ':' + j); });
+  const nEv = Math.min(+i.ev || 0, all.length), evSet = new Set(); for (let k = 0; k < nEv; k++) evSet.add(all[Math.floor((k + 0.5) * all.length / nEv)]);
   const m = 1.6, W = g.L + 2 * m, H = g.D + 2 * m + 1.2, s = 1000 / W, f = v => (v * s).toFixed(1);
   const X = y => f(y + m), Y = x => f(x + m + 0.6);
   let h = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${f(W)} ${f(H)}" font-family="Inter,Arial,sans-serif">`;
   h += `<rect width="100%" height="100%" fill="${bg}"/>`;
-  g.aisles.forEach(a => { h += `<rect x="${X(0)}" y="${Y(a.x0)}" width="${f(g.L)}" height="${f(a.x1 - a.x0)}" fill="rgba(255,255,255,.04)"/><text x="${X(g.L / 2)}" y="${Y((a.x0 + a.x1) / 2)}" fill="${dim}" font-size="${f(0.45)}" text-anchor="middle" dominant-baseline="middle">korsi ${String(i.aisle).replace('.', ',')} m</text>`; });
+  g.aisles.forEach(a => { h += `<rect x="${X(0)}" y="${Y(a.x0)}" width="${f(g.L)}" height="${f(a.x1 - a.x0)}" fill="${ais}"/><text x="${X(g.L / 2)}" y="${Y((a.x0 + a.x1) / 2)}" fill="${dim}" font-size="${f(0.45)}" text-anchor="middle" dominant-baseline="middle">korsi ${String(i.aisle).replace('.', ',')} m</text>`; });
   let nr = 0;
-  g.carRows.forEach(r => { for (let j = 0; j < i.nSpaces; j++) { nr++; const y0 = 0.15 + j * i.spaceW; h += `<rect x="${X(y0)}" y="${Y(r.x0)}" width="${f(i.spaceW)}" height="${f(r.x1 - r.x0)}" fill="none" stroke="${dim}" stroke-width="${f(0.03)}"/><text x="${X(y0 + i.spaceW / 2)}" y="${Y((r.x0 + r.x1) / 2)}" fill="${dim}" font-size="${f(0.42)}" text-anchor="middle" dominant-baseline="middle">${nr}</text>`; } });
+  g.carRows.forEach((r, ri) => { for (let j = 0; j < i.nSpaces; j++) { nr++; const y0 = 0.15 + j * i.spaceW, ev = evSet.has(ri + ':' + j); h += `<rect x="${X(y0)}" y="${Y(r.x0)}" width="${f(i.spaceW)}" height="${f(r.x1 - r.x0)}" fill="${ev ? evc : 'none'}" fill-opacity="${ev ? 0.22 : 0}" stroke="${ev ? evc : dim}" stroke-width="${f(0.03)}"/><text x="${X(y0 + i.spaceW / 2)}" y="${Y((r.x0 + r.x1) / 2)}" fill="${ev ? evc : dim}" font-size="${f(0.42)}" font-weight="${ev ? 700 : 400}" text-anchor="middle" dominant-baseline="middle">${nr}${ev ? ' EV' : ''}</text>`; } });
   h += `<rect x="${X(0)}" y="${Y(0)}" width="${f(g.L)}" height="${f(g.D)}" fill="none" stroke="${acc}" stroke-width="${f(0.06)}" stroke-dasharray="${f(0.35)} ${f(0.2)}"/>`;
   g.planes.forEach(p => { if (p.x0 > 0) h += `<line x1="${X(0)}" y1="${Y(p.x0)}" x2="${X(g.L)}" y2="${Y(p.x0)}" stroke="${acc}" stroke-width="${f(0.03)}" stroke-dasharray="${f(0.2)} ${f(0.2)}" opacity=".6"/>`; });
   const cw = Math.max(0.22, res.col.sec.b / 1000), cd = Math.max(0.22, res.col.sec.h / 1000);
