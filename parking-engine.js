@@ -45,7 +45,7 @@
   };
   const CLIENT_KEYS = Object.keys(DEF);
   // parametrat e inxhinierit (vetëm në panel)
-  const ENG = { grade: 'S275', beamFam: 'IPE', colFam: 'auto', purlinFam: 'RHS', coat: 'zink', soil: 150, conn: 12, beamSec: '', colSec: '', purlinSec: '', pvWp: PV.Wp, endOver: 0.15 };
+  const ENG = { grade: 'S275', beamFam: 'IPE', colFam: 'auto', purlinFam: 'RHS', coat: 'zink', soil: 150, conn: 12, beamSec: '', colSec: '', purlinSec: '', pvWp: PV.Wp, endOver: 0.15, pkg: 'std' };
 
   function cityOf(n) { return CITIES.find(c => c[0] === n) || CITIES[0]; }
   function rowsOf(i) { return i.model === 'ty' ? 2 : i.model === 'rrjet' ? i.nRows : 1; }
@@ -160,6 +160,7 @@
     const res = Object.assign({ inp: i, eng: e, geo, cover: cov, model: MODELS[i.model], warn }, out);
     res.pv = pvLayout(i, e, geo);
     res.opts = options(i, res);
+    res.equip = window.ParkEquip ? window.ParkEquip.pick(i, res, e.pkg) : null;
     res.qty = quantities(i, e, res);
     res.ok = res.purlin.u <= 1 && res.purlin.d <= 1 && res.beam.u <= 1 && res.beam.d <= 1 && res.col.u <= 1 && res.col.d <= 1;
     if (!res.ok) warn.push('Disa elemente nuk i kalojnë kontrollet me profilet e zgjedhura.');

@@ -14,6 +14,8 @@ window.ParkSchema = function (res, P) {
   const amps = (kW, three) => kW * 1000 / (three ? 692.8 : 230);
   const W = 1200, H = 700;
   const o = res.opts || {}, pv = res.pv, inv = o.inverter, bat = o.battery, ev = o.ev, led = o.led;
+  const EQ = P.models && res.equip ? res.equip : null;
+  const cut = (t, n) => t.length > n ? t.slice(0, n - 1) + '…' : t;
   if (!pv && !ev && !led) {
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} 220" font-family="Inter, Arial, Helvetica, sans-serif"><rect width="${W}" height="220" fill="${bg}"/><text x="${W / 2}" y="100" fill="${ink}" font-size="26" font-weight="700" text-anchor="middle">Kjo strehë nuk ka pajisje elektrike</text><text x="${W / 2}" y="140" fill="${dim}" font-size="18" text-anchor="middle">Shto panele diellore, karikues ose ndriçim LED për të parë skemën.</text></svg>`;
   }
@@ -47,7 +49,7 @@ window.ParkSchema = function (res, P) {
   let invKw = 0, three = true, hybrid = false, nInv = 1;
   if (pv) {
     invKw = inv ? inv.kw : pv.inverterKw;
-    three = invKw > 6; hybrid = !!bat && invKw <= 50;
+    three = invKw > 6; hybrid = !!bat && (EQ ? EQ.coupling === 'dc' : invKw <= 50);
     nInv = invKw > 110 ? Math.ceil(invKw / 100) : 1;
     const maxPer = three ? 16 : 12, S = Math.max(1, Math.ceil(pv.n / maxPer)), mMin = Math.floor(pv.n / S), mMax = Math.ceil(pv.n / S);
     // fusha fotovoltaike
@@ -68,8 +70,9 @@ window.ParkSchema = function (res, P) {
     L([[DX + 160, DY + 55], [IX, DY + 55]], dc, 3); L([[DX + 160, DY + 70], [IX, DY + 70]], dc, 3);
     T(DX + 168, DY + 47, '+', { c: dc, s: 15, b: 1 }); T(DX + 168, DY + 92, '−', { c: dc, s: 15, b: 1 });
     const invTitle = inv ? (hybrid ? 'Inverter hibrid' : 'Inverter rrjeti') : 'Inverter';
-    const invLines = inv ? [(nInv > 1 ? nInv + ' × ' + kw(invKw / nInv) : kw(invKw)) + ' kW · ' + (three ? 'trefazor' : 'njëfazor'), hybrid ? 'panele + bateri' : 'lidhje në rrjet', 'kontroll vetëkonsumi'] : ['nuk përfshihet', 'në këtë ofertë'];
-    BOX(IX, IY, 175, 160, invTitle, invLines, inv ? {} : { dash: 1 });
+    const invLines = inv ? (EQ && EQ.inv ? EQ.inv.units.filter(u => u.role !== 'bat').slice(0, 2).map(u => cut((u.n > 1 ? u.n + ' × ' : '') + u.model.replace(/^(Sungrow|Deye|Huawei|SMA) /, '').replace('Sunny Tripower', 'STP'), 22)).concat([kw(EQ.invKw) + ' kW · ' + (hybrid ? 'hibrid' : 'rrjeti') + (three ? ' · 3F' : ' · 1F')]) : [(nInv > 1 ? nInv + ' × ' + kw(invKw / nInv) : kw(invKw)) + ' kW · ' + (three ? 'trefazor' : 'njëfazor'), hybrid ? 'panele + bateri' : 'lidhje në rrjet', 'kontroll vetëkonsumi']) : ['nuk përfshihet', 'në këtë ofertë'];
+    const invT = EQ && EQ.inv ? 'Inverter ' + EQ.inv.brand : invTitle;
+    BOX(IX, IY, 175, 160, cut(invT, 20), invLines, inv ? {} : { dash: 1 });
     // simboli i inverterit
     const sx = IX + 120, sy = IY + 108;
     h += `<rect x="${sx}" y="${sy}" width="44" height="44" fill="none" stroke="${ink}" stroke-width="1.8"/><line x1="${sx}" y1="${sy + 44}" x2="${sx + 44}" y2="${sy}" stroke="${ink}" stroke-width="1.5"/>`;
@@ -83,7 +86,8 @@ window.ParkSchema = function (res, P) {
     // bateria
     if (bat) {
       const BX = IX, BY = hybrid ? 280 : 300;
-      BOX(BX, BY, 175, 110, hybrid ? 'Bateri LFP' : 'Bateri + PCS', [kw(bat.kwh) + ' kWh', hybrid ? 'BMS · siguresë DC' : 'inverter baterie'], { ix: 14 });
+      const bk = EQ && EQ.bat ? EQ.bat.kwh : bat.kwh, bm = EQ && EQ.bat ? cut(EQ.bat.model.replace(/^(\d+ × )?(Sungrow|Deye|Huawei|SMA|BYD Battery-Box Premium) /, '$1'), 21) : null;
+      BOX(BX, BY, 175, 110, hybrid ? 'Bateri LFP' : 'Bateri + PCS', bm ? [bm, kw(bk) + ' kWh'] : [kw(bk) + ' kWh', hybrid ? 'BMS · siguresë DC' : 'inverter baterie'], { ix: 14 });
       // simboli i baterisë
       const cx = BX + 128, cy = BY + 24;
       for (let k = 0; k < 3; k++) { L([[cx + k * 13, cy - 13], [cx + k * 13, cy + 13]], ink, 2); L([[cx + k * 13 + 6, cy - 7], [cx + k * 13 + 6, cy + 7]], ink, 4); }
@@ -102,7 +106,8 @@ window.ParkSchema = function (res, P) {
     Iev = Ia * ev.n;
     breaker(BUS, PX + PW, y, evc); L([[PX + PW, y], [DXo, y]], evc, 3); if (ph3) tick3(PX + PW + 30, y);
     T(BUS + 4, y + 26, `${ev.n}×C${b}`, { c: dim, s: 12.5 });
-    BOX(DXo, PY + 20, Dw, 150, 'Karikues EV', [`${ev.n} × ${kw(ev.kw)} kW`, ph3 ? 'trefazor 400 V' : 'njëfazor 230 V', 'RCD tip A + 6 mA DC', 'menaxhim ngarkese'], { c: evc });
+    const evm = EQ && EQ.ev ? cut(EQ.ev.model.replace(/ \(vendosur.*$/, '').replace(/^(Sungrow|Huawei|SMA) /, '').replace(/^karikues AC me OCPP, p\.sh\. (.*?) [\d,]+ kW$/, '$1 (OCPP)'), 24) : null;
+    BOX(DXo, PY + 20, Dw, 150, 'Karikues EV', [`${ev.n} × ${kw(ev.kw)} kW`].concat(evm ? [evm] : [], [ph3 ? 'trefazor 400 V' : 'njëfazor 230 V', 'RCD tip A + 6 mA DC']).concat(evm ? [] : ['menaxhim ngarkese']), { c: evc });
     // spina
     const px = DXo + Dw - 40, py = PY + 36;
     h += `<rect x="${px}" y="${py}" width="26" height="32" rx="5" fill="none" stroke="${evc}" stroke-width="2"/><circle cx="${px + 13}" cy="${py + 16}" r="5" fill="${evc}"/>`;
@@ -127,7 +132,7 @@ window.ParkSchema = function (res, P) {
   // matësi dydrejtimësh dhe rrjeti
   const mx = DXo + 125, my = 520;
   L([[mx, MBY + 90], [mx, my - 30]], ac, 3);
-  h += `<circle cx="${mx}" cy="${MBY + 116}" r="9" fill="${bg}" stroke="${ink}" stroke-width="2"/>`; T(mx - 14, MBY + 121, 'CT', { s: 13, b: 1, a: 'end' });
+  h += `<circle cx="${mx}" cy="${MBY + 116}" r="9" fill="${bg}" stroke="${ink}" stroke-width="2"/>`; T(mx - 14, MBY + 121, 'CT' + (EQ && EQ.meterShort ? ' · ' + EQ.meterShort : ''), { s: 13, b: 1, a: 'end' });
   h += `<circle cx="${mx}" cy="${my}" r="30" fill="${boxF}" stroke="${acc}" stroke-width="2.5"/>`;
   T(mx, my - 2, 'kWh', { s: 15, b: 1, a: 'middle' }); T(mx, my + 16, '⇄', { s: 15, b: 1, a: 'middle', c: acc });
   T(mx - 38, my - 4, 'Matës', { s: 14, b: 1, a: 'end' }); T(mx - 38, my + 14, 'dydrejtimësh', { s: 13, c: dim, a: 'end' });

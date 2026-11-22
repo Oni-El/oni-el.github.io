@@ -5,12 +5,13 @@
   const KEYS = [
     ['Çeliku', [['stMat', 'Materiali i çelikut', '€/kg'], ['stFab', 'Prodhimi në punëtori', '€/kg'], ['stZink', 'Zinkimi në të nxehtë', '€/kg'], ['stPaint', 'Bojatisja (alternativë)', '€/kg'], ['stMont', 'Montimi i strukturës', '€/kg']]],
     ['Mbulesa', [['sheet', 'Llamarinë trapezoidale', '€/m²'], ['sandwich', 'Panel sanduiç 40 mm', '€/m²'], ['poly', 'Polikarbonat 16 mm', '€/m²'], ['coverMont', 'Montimi i mbulesës', '€/m²'], ['flash', 'Bordura dhe mbyllje skajesh', '€/m']]],
-    ['Panelet diellore', [['pvWp', 'Panelet', '€/Wp'], ['pvMount', 'Kapëset dhe fiksimet', '€/Wp'], ['pvInst', 'Montimi i paneleve', '€/Wp'], ['pvBos', 'Kabllot DC/AC, mbrojtjet, tokëzimi', '€/kWp'], ['inverter', 'Inverteri', '€/kW'], ['invMin', 'Inverteri, minimumi', '€'], ['battery', 'Bateria', '€/kWh']]],
-    ['Karikuesit dhe ndriçimi', [['ev7', 'Karikues 7,4 kW', '€/copë'], ['ev11', 'Karikues 11 kW', '€/copë'], ['ev22', 'Karikues 22 kW', '€/copë'], ['evInst', 'Montimi i karikuesit', '€/copë'], ['evCable', 'Kabllo për karikuesit', '€/m'], ['led', 'Ndriçues LED me kabllim', '€/copë']]],
+    ['Panelet diellore', [['pvWp', 'Panelet', '€/Wp'], ['pvMount', 'Kapëset dhe fiksimet', '€/Wp'], ['pvInst', 'Montimi i paneleve', '€/Wp'], ['pvBos', 'Kabllot DC/AC, mbrojtjet, tokëzimi', '€/kWp'], ['inverter', 'Inverteri i rrjetit', '€/kW'], ['invHybrid', 'Inverteri hibrid / i baterisë', '€/kW'], ['invMin', 'Inverteri, minimumi për copë', '€'], ['battery', 'Bateria', '€/kWh'], ['meter', 'Matësi i energjisë me CT', '€'], ['logger', 'Logger / menaxheri i energjisë', '€']]],
+    ['Karikuesit dhe ndriçimi', [['ev7', 'Karikues 7,4 kW', '€/copë'], ['ev11', 'Karikues 11 kW', '€/copë'], ['ev22', 'Karikues 22 kW', '€/copë'], ['evInst', 'Montimi i karikuesit', '€/copë'], ['evOcpp', 'Shtesë për karikues biznesi me OCPP', '€/copë'], ['evCable', 'Kabllo për karikuesit', '€/m'], ['led', 'Ndriçues LED me kabllim', '€/copë']]],
     ['Ulluqe dhe mbyllje', [['gutter', 'Ulluk', '€/m'], ['down', 'Ulluk zbritës', '€/m'], ['closeSheet', 'Mbyllje me llamarinë', '€/m²'], ['closeSandwich', 'Mbyllje me panel sanduiç', '€/m²'], ['closePoly', 'Mbyllje me polikarbonat', '€/m²'], ['closeMont', 'Montimi i mbylljes', '€/m²']]],
     ['Themelet', [['concrete', 'Betoni', '€/m³'], ['rebar', 'Hekuri', '€/kg'], ['excav', 'Gërmimi dhe largimi', '€/m³'], ['anchorM20', 'Ankera M20, kompleti', '€'], ['anchorM24', 'Ankera M24, kompleti', '€'], ['anchorM27', 'Ankera M27, kompleti', '€']]],
     ['Transporti dhe mjetet', [['truck', 'Kamioni', '€/udhëtim'], ['truckKg', 'Ngarkesa e kamionit', 'kg'], ['crane', 'Autovinçi', '€/ditë'], ['tPerDay', 'Montim në ditë', 't/ditë']]],
     ['Totali', [['designPct', 'Projekti', '%'], ['designMin', 'Projekti, minimumi', '€'], ['contPct', 'Të paparashikuara', '%'], ['margin', 'Marzhi', '%'], ['round', 'Rrumbullakimi', '€'], ['vat', 'TVSH', '%'], ['eurAll', 'Kursi', 'Lekë/€']]],
+    ['Paketat e pajisjeve', [['pkgHuawei', 'Huawei: shtesë mbi inverter, bateri dhe karikues', '%'], ['pkgEu', 'Europiane (SMA + BYD): shtesë mbi inverter, bateri dhe karikues', '%']]],
     ['Energjia', [['tariff', 'Tarifa e energjisë për biznes (0,4 kV)', 'Lekë/kWh']]]
   ];
   const EV_KEY = { 7.4: 'ev7', 11: 'ev11', 22: 'ev22' };
@@ -19,6 +20,17 @@
     o = o || {};
     const i = res.inp, q = res.qty, op = res.opts, f = res.found;
     const p = k => +P[k] || 0;
+    // pajisjet sipas paketës (marka dhe modelet); pa paketë përdoren zërat e përgjithshëm
+    const eq = res.equip, fk = eq ? 1 + (eq.pkg === 'huawei' ? p('pkgHuawei') : eq.pkg === 'eu' ? p('pkgEu') : 0) / 100 : 1;
+    const nr1 = v => String(Math.round(v * 10) / 10).replace('.', ',');
+    function eqRows() {
+      if (!eq || !eq.inv) return [op.inverter ? it(`Inverter ${op.inverter.kw} kW`, 1, 'copë', Math.max(p('invMin'), op.inverter.kw * p('inverter'))) : null, op.battery ? it('Bateri', op.battery.kwh, 'kWh', p('battery')) : null];
+      const out = eq.inv.units.map(u => { const r = u.role === 'pv' ? p('inverter') : (p('invHybrid') || p('inverter')); return it(`${u.role === 'bat' ? 'Inverter baterie' : u.role === 'hyb' ? 'Inverter hibrid' : 'Inverter'} ${u.model}`, u.n, 'copë', Math.max(p('invMin'), u.kw * r) * fk); });
+      if (eq.bat) out.push(it(`Bateri ${eq.bat.model} (${nr1(eq.bat.kwh)} kWh)`, eq.bat.kwh, 'kWh', p('battery') * fk));
+      if (eq.meter) out.push(it(`Matës ${eq.meter}`, 1, 'copë', p('meter')));
+      if (eq.logger) out.push(it(`Monitorim: ${eq.mon}`, 1, 'copë', p('logger')));
+      return out;
+    }
     const rows = [];
     const grp = (g, items) => { const its = items.filter(x => x && x[3] > 0.004); if (its.length) rows.push({ g, items: its, sum: its.reduce((a, x) => a + x[3], 0) }); };
     const it = (name, qty, unit, price) => [name, qty, unit, qty * price, price];
@@ -35,9 +47,7 @@
         it('Kapëse dhe fiksime', Wp, 'Wp', p('pvMount')),
         it('Montimi i paneleve', Wp, 'Wp', p('pvInst')),
         it('Kabllot, mbrojtjet dhe tokëzimi', res.pv.kWp, 'kWp', p('pvBos')),
-        op.inverter ? it(`Inverter ${op.inverter.kw} kW`, 1, 'copë', Math.max(p('invMin'), op.inverter.kw * p('inverter'))) : null,
-        op.battery ? it('Bateri', op.battery.kwh, 'kWh', p('battery')) : null
-      ]);
+      ].concat(eqRows()));
     } else {
       const pr = { sheet: p('sheet'), sandwich: p('sandwich'), poly: p('poly') }[i.cover] || 0;
       grp('Mbulesa', [
@@ -47,7 +57,11 @@
       ]);
     }
     const ext = [];
-    if (op.ev) ext.push(it(`Karikues ${String(op.ev.kw).replace('.', ',')} kW`, op.ev.n, 'copë', p(EV_KEY[op.ev.kw] || 'ev11') + p('evInst')), it('Kabllo për karikuesit', op.ev.cable, 'm', p('evCable')));
+    if (op.ev) {
+      const e = eq && eq.ev, evp = (p(EV_KEY[op.ev.kw] || 'ev11') + (e && e.ocpp ? p('evOcpp') : 0)) * fk + p('evInst');
+      ext.push(it(e ? `Karikues ${e.model}` : `Karikues ${String(op.ev.kw).replace('.', ',')} kW`, op.ev.n, 'copë', evp), it('Kabllo për karikuesit', op.ev.cable, 'm', p('evCable')));
+      if (eq && !eq.inv && eq.meter && op.ev.n > 1) ext.push(it('Matës për ndarjen e fuqisë', 1, 'copë', p('meter')));
+    }
     if (op.led) ext.push(it('Ndriçues LED', op.led.n, 'copë', p('led')));
     if (op.gutter) ext.push(it('Ulluqe', op.gutter.m, 'm', p('gutter')), it('Ulluqe zbritëse', op.gutter.downM, 'm', p('down')));
     if (op.closure) {

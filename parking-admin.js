@@ -157,7 +157,9 @@
       <label class="f"><span class="fl">Profili i çatisë</span><span class="inp"><select data-e="purlinSec">${secOpts(eng.purlinFam, eng.purlinSec)}</select></span></label>
       <label class="f"><span class="fl">Toka e lejuar</span>${num('soil', 'kPa', 10)}</label>
       <label class="f"><span class="fl">Lidhjet dhe pllakat</span>${num('conn', '% e çelikut', 1)}</label>
-      <label class="f"><span class="fl">Paneli diellor</span>${num('pvWp', 'Wp', 5)}</label>`;
+      <label class="f"><span class="fl">Paneli diellor</span>${num('pvWp', 'Wp', 5)}</label>
+      <label class="f w2"><span class="fl">Paketa e pajisjeve (inverter, bateri, karikues)</span><span class="inp">${sel('pkg', Object.keys(ParkEquip.PKGS).map(k => [k, ParkEquip.PKGS[k].name]))}</span></label>
+      <div class="w2 eqbox" id="eqBox"></div>`;
     $$('#engBox [data-e]').forEach(x => x.addEventListener('change', () => {
       const k = x.dataset.e; let v = x.value;
       if (x.type === 'number') v = parseFloat(String(v).replace(',', '.')) || 0;
@@ -166,6 +168,12 @@
       if (/Fam$/.test(k)) renderEng();
       saveLocal(); compute();
     }));
+  }
+  // lista e pajisjeve të zgjedhura sipas paketës
+  function renderEq() {
+    const b = $('#eqBox'); if (!b) return;
+    const eq = res && res.equip;
+    b.innerHTML = eq ? `<dl class="kv eqkv">${eq.lines.map(x => `<dt>${esc(x[0])}</dt><dd>${esc(x[1])}</dd>`).join('')}</dl>` : '<small class="help">Pa pajisje elektrike (pa panele dhe pa karikues).</small>';
   }
   function renderOff() {
     const tx = (k, l, ph) => `<label class="f w2"><span class="fl">${l}</span><span class="inp"><input data-o="${k}" value="${esc(off[k] || '')}" placeholder="${esc(ph || '')}"></span></label>`;
@@ -206,11 +214,11 @@
   function compute() {
     try { res = E.design(inp, eng); } catch (e) { console.error(e); return; }
     cost = prices ? PC.costs(res, prices, { margin: off.margin }) : null;
-    renderChips(); renderCalc(); renderCost();
+    renderChips(); renderCalc(); renderCost(); renderEq();
     if (curTab === 'm3d' && ParkView3D.ready) { ParkView3D.build(res); built = res; }
     if (curTab === 'offer') renderOffer();
     if (curTab === 'plan') $('#drPlan').innerHTML = ParkPlan(res);
-    if (curTab === 'schema') $('#drSchema').innerHTML = ParkSchema(res);
+    if (curTab === 'schema') $('#drSchema').innerHTML = ParkSchema(res, { models: true });
   }
   function renderChips() {
     const g = res.geo, c = [['Vende', g.spaces], ['Strehë', f1(g.L) + ' × ' + f1(g.D) + ' m'], ['Çeliku', fmt(res.qty.steel, 0) + ' kg'], ['kg/m²', f1(res.qty.steel / g.area)], ['Kolona', res.nCol]];
@@ -317,7 +325,8 @@
     d.push(['Vende parkimi', `${g.spaces} makina` + (E.rowsOf(i) > 1 ? ` (${E.rowsOf(i)} rreshta × ${i.nSpaces})` : '') + `, vendi ${f2(i.spaceW)} × ${f2(i.spaceL)} m`]);
     d.push(['Përmasat', `${f2(g.L)} × ${f2(g.D)} m, lartësia e lirë ${f2(i.H)} m, pjerrësia ${fmt(i.tilt, 0)}°`]);
     d.push(['Struktura', `Kolona ${r.col.sec.name}, trarë ${r.beam.sec.name}, trarë çatie ${r.purlin.sec.name}; çelik ${eng.grade}, ${eng.coat === 'paint' ? 'i lyer me bojë' : 'i zinkuar në të nxehtë'}; rreth ${fmt(Math.round(r.qty.steel / 10) * 10, 0)} kg`]);
-    if (r.pv) d.push(['Sistemi diellor', `${r.pv.n} panele ${r.pv.Wp} Wp, gjithsej ${f2(r.pv.kWp)} kWp` + (r.opts.inverter ? `, inverter ${f1(r.opts.inverter.kw)} kW i lidhur në rrjet` : '') + (r.opts.battery ? `, bateri ${fmt(r.opts.battery.kwh, 0)} kWh` : '') + `; prodhimi i vlerësuar ${fmt(Math.round(r.pv.kwh / 100) * 100, 0)} kWh/vit`]);
+    const eq = r.equip;
+    if (r.pv) d.push(['Sistemi diellor', `${r.pv.n} panele ${r.pv.Wp} Wp, gjithsej ${f2(r.pv.kWp)} kWp` + (r.opts.inverter ? (eq && eq.inv ? `, ${eq.coupling === 'dc' ? 'inverter hibrid' : 'invertera'} ${eq.inv.brand} i lidhur në rrjet` : `, inverter ${f1(r.opts.inverter.kw)} kW i lidhur në rrjet`) : '') + (r.opts.battery ? `, bateri ${fmt(eq && eq.bat ? eq.bat.kwh : r.opts.battery.kwh, 1)} kWh` : '') + `; prodhimi i vlerësuar ${fmt(Math.round(r.pv.kwh / 100) * 100, 0)} kWh/vit`]);
     else d.push(['Mbulesa', `${r.cover.name}, ${f1(r.qty.coverArea)} m²`]);
     const o = [];
     if (r.opts.ev) o.push(`${r.opts.ev.n} karikues ${kwStr(r.opts.ev.kw)} kW`);
@@ -325,6 +334,7 @@
     if (r.opts.gutter) o.push(`ulluqe ${fmt(r.opts.gutter.m, 0)} m me ${r.opts.gutter.down} zbritëse`);
     if (r.opts.closure) o.push(`mbyllje anësore ${f1(r.opts.closure.area)} m²`);
     if (o.length) d.push(['Opsionet', o.join(', ')]);
+    if (eq) eq.lines.forEach(x => d.push([x[0], x[1]]));
     d.push(['Themelet', `${r.found.n} bazamente betoni ${f2(r.found.B)} × ${f2(r.found.B)} × ${f2(r.found.h)} m me ankera ${r.found.bolt}`]);
     d.push(['Zona', i.city]);
     return d;
@@ -362,7 +372,7 @@
 
   /* ---------- oferta si dokument (PDF, WhatsApp, imazh) ---------- */
   const PRINT_PAL = { ink: '#18212a', dim: '#5d6b77', accent: '#d48c06', steel: '#2f6fa3', bg: '#ffffff', aisle: '#f1f4f6', ev: '#16a34a' };
-  const SCHEMA_PAL = { ink: '#18212a', dim: '#5d6b77', bg: '#ffffff', box: '#f3f6f8', line: '#c9d2d9', ac: '#2f6fa3', dc: '#d97706', ev: '#16a34a', accent: '#d48c06', pv: '#1d3a66' };
+  const SCHEMA_PAL = { models: true, ink: '#18212a', dim: '#5d6b77', bg: '#ffffff', box: '#f3f6f8', line: '#c9d2d9', ac: '#2f6fa3', dc: '#d97706', ev: '#16a34a', accent: '#d48c06', pv: '#1d3a66' };
   const hasElec = () => !!(res.pv || res.opts.ev || res.opts.led);
   function autoNo() {
     if (current) return code(current) + '-v' + ((current.offer_version || 0) + 1);
@@ -440,6 +450,7 @@
     L.push(r.pv ? `Panele diellore: ${r.pv.n} × ${r.pv.Wp} Wp = ${f1(r.pv.kWp)} kWp, rreth ${fmt(Math.round(r.pv.kwh / 100) * 100, 0)} kWh/vit` : 'Mbulesa: ' + r.cover.name.toLowerCase());
     const op = []; if (r.opts.ev) op.push(r.opts.ev.n + ' karikues ' + kwStr(r.opts.ev.kw) + ' kW'); if (r.opts.battery) op.push('bateri ' + fmt(r.opts.battery.kwh, 0) + ' kWh'); if (r.opts.led) op.push('ndriçim LED'); if (r.opts.closure) op.push('mbyllje anësore');
     if (op.length) L.push('Opsione: ' + op.join(', '));
+    if (r.equip) L.push('Pajisjet: ' + r.equip.lines.filter(x => x[0] !== 'Monitorimi').map(x => x[1]).join('; '));
     L.push(`*Çmimi: ${money(c.price)} pa TVSH* (${money(c.perSpace)} për vend)`);
     if (en && off.showSave) L.push(`Kursimi i energjisë: rreth ${money(Math.round(en.save / 10) * 10)} në vit`);
     L.push(`Afati: ${off.lead} · Oferta e vlefshme deri më ${o.offer.validStr}`);
@@ -482,7 +493,7 @@
     ['m3d', 'plan', 'schema', 'calc', 'cost', 'offer'].forEach(k => { $('#pane-' + k).hidden = k !== t; });
     $('.viz').classList.toggle('long', t === 'cost' || t === 'offer' || t === 'calc');
     if (t === 'm3d') { ParkView3D.resize(); if (res) { ParkView3D.build(res); built = res; } } else if (t === 'plan' && res) $('#drPlan').innerHTML = ParkPlan(res);
-    else if (t === 'schema' && res) $('#drSchema').innerHTML = ParkSchema(res);
+    else if (t === 'schema' && res) $('#drSchema').innerHTML = ParkSchema(res, { models: true });
     else if (t === 'cost') renderCost(); else if (t === 'offer') renderOffer();
   }
   async function init() {
