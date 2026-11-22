@@ -128,12 +128,16 @@
     .mcard[aria-pressed="true"] { border-color: var(--accent); background: rgba(244,160,18,.08) }
     .mcard[aria-pressed="true"] svg { color: var(--accent) }
     .mcard:disabled { cursor: default }
-    .seg.wrap { flex-wrap: wrap } .seg.wrap button { flex: 1 1 45% }
+    .seg.wrap { flex-wrap: wrap } .seg.wrap button { flex: 1 1 45% } .seg.wrap.c3 button { flex: 1 1 30% }
     .help.note { color: var(--muted); background: var(--panel-2); border-left: 3px solid var(--accent); padding: 7px 10px; border-radius: 3px }
     .chip.pv b { color: var(--accent) }
     .pvcard { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; font-size: 13px; color: var(--muted) }
     .pvcard b { color: var(--ink) }
     @media (max-width: 340px) { .models { grid-template-columns: 1fr } }
+    .schema svg { width: 100%; height: auto; display: block; border-radius: 6px }
+    .schema { overflow-x: auto } .schema svg { min-width: 760px }
+    .drnote.mob { display: none; text-align: center; padding: 0 0 8px } @media (max-width: 760px) { .drnote.mob { display: block } }
+    .viz { grid-template-columns: minmax(0, 1fr) }
 
     .nav .acts { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end }
     .btn.sm { padding: 6px 11px; font-size: 12.5px } .btn.danger { border-color: rgba(248,113,113,.5); color: var(--bad) }
@@ -237,6 +241,7 @@
         <div class="vtabs" role="tablist">
           <button type="button" role="tab" data-t="m3d" aria-selected="true">Modeli 3D</button>
           <button type="button" role="tab" data-t="plan" aria-selected="false">Planimetria</button>
+          <button type="button" role="tab" data-t="schema" aria-selected="false">Skema elektrike</button>
           <button type="button" role="tab" data-t="calc" aria-selected="false">Llogaritja</button>
           <button type="button" role="tab" data-t="cost" aria-selected="false">Kostot</button>
           <button type="button" role="tab" data-t="offer" aria-selected="false">Oferta</button>
@@ -251,6 +256,7 @@
           </div>
         </div>
         <div id="pane-plan" hidden><div class="drawing" id="drPlan"></div></div>
+        <div id="pane-schema" hidden><div class="drawing schema" id="drSchema"></div></div>
         <div id="pane-calc" class="pane" hidden><div id="calcBox"></div></div>
         <div id="pane-cost" hidden><div class="pane dlbar"><div><b>Analiza e kostos</b><small>Vetëm për ty: kostot, çmimet njësi dhe fitimi. Mos ia dërgo klientit.</small></div><button class="btn sm pri" id="bCostPdf" type="button">Shkarko kostot (PDF)</button></div><div id="costBox"></div></div>
         <div id="pane-offer" hidden>
@@ -287,6 +293,7 @@
   <script src="parking-engine.js"></script>
   <script src="parking-costs.js"></script>
   <script src="parking-view3d.js"></script>
+  <script src="parking-schema.js"></script>
   <script src="parking-form.js"></script>
   <script src="parking-admin.js"></script>
 </body>

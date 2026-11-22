@@ -56,6 +56,7 @@
     } else pc.hidden = true;
     if (window.ParkView3D && ParkView3D.ready && curTab === 'm3d') ParkView3D.build(res);
     if (curTab === 'plan') $('#drPlan').innerHTML = ParkPlan(res);
+    if (curTab === 'schema') $('#drSchema').innerHTML = ParkSchema(res);
   }
 
   /* ---------------- dërgimi ---------------- */
@@ -165,8 +166,8 @@
   function showTab(t) {
     curTab = t;
     $$('.vtabs button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.t === t)));
-    $('#pane-m3d').hidden = t !== 'm3d'; $('#pane-plan').hidden = t !== 'plan';
-    if (t === 'm3d') { ParkView3D.resize(); if (res) ParkView3D.build(res); } else if (res) $('#drPlan').innerHTML = ParkPlan(res);
+    $('#pane-m3d').hidden = t !== 'm3d'; $('#pane-plan').hidden = t !== 'plan'; $('#pane-schema').hidden = t !== 'schema';
+    if (t === 'm3d') { ParkView3D.resize(); if (res) ParkView3D.build(res); } else if (t === 'plan' && res) $('#drPlan').innerHTML = ParkPlan(res); else if (t === 'schema' && res) $('#drSchema').innerHTML = ParkSchema(res);
   }
   function init() {
     form = ParkForm.mount($('#cfgSteps'), { get: () => inp, set: setVal, editable: () => editing, startNo: 1 });

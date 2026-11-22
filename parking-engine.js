@@ -65,6 +65,7 @@
     i.evKw = [7.4, 11, 22].includes(+i.evKw) ? +i.evKw : 11;
     i.battery = clamp(+i.battery || 0, 0, 200);
     if (i.cover !== 'pv') { i.inverter = false; i.battery = 0; }
+    if (i.battery > 0) i.inverter = true;          // bateria kërkon inverter hibrid
     return i;
   }
 

@@ -37,11 +37,15 @@ window.ParkForm = (function () {
       { k: 'axis', l: 'Gjatësia e parkingut shtrihet', t: 'sel', w2: 1, o: AXES, show: i => i.cover === 'pv' && !isMono(i), help: 'Gjysma e paneleve kthehet nga njëra anë, gjysma nga tjetra.' },
       { k: '_pvnote', t: 'note', w2: 1, show: i => i.cover === 'pv', text: 'Panelet diellore shërbejnë edhe si çati. Mes tyre mbeten fuga të vogla, ndaj nuk janë plotësisht të papërshkueshme nga uji.' }
     ] },
+    { id: 'energy', t: 'Energjia dhe bateria', f: [
+      { k: 'inverter', l: 'Inverter dhe lidhje në rrjet', t: 'tog', w2: 1, show: i => i.cover === 'pv' },
+      { k: 'battery', l: 'Bateri për ruajtjen e energjisë', t: 'seg', num: 1, w2: 1, wrap: 1, c3: 1, o: [[0, 'Pa bateri'], [10, '10 kWh'], [20, '20 kWh'], [30, '30 kWh'], [50, '50 kWh'], [100, '100 kWh']], show: i => i.cover === 'pv', help: 'Bateria ruan energjinë e ditës për karikimin e makinave dhe ndriçimin në mbrëmje. Si rregull: rreth 0,5–1 kWh për çdo kWp panele. Me bateri inverteri bëhet hibrid.' },
+      { k: '_nopv', t: 'note', w2: 1, show: i => i.cover !== 'pv', text: 'Inverteri dhe bateria shtohen kur mbulesa është me panele diellore. Zgjidh «Panele diellore» te mbulesa.' },
+      { k: '_schema', t: 'note', w2: 1, show: i => i.cover === 'pv' || i.ev > 0 || i.led, text: 'Si lidhen panelet, bateria, karikuesit dhe rrjeti e sheh te skeda «Skema elektrike».' }
+    ] },
     { id: 'opt', t: 'Opsionet', f: [
       { k: 'ev', l: 'Karikues për makina elektrike', u: 'copë', min: 0, max: 200, step: 1 },
       { k: 'evKw', l: 'Fuqia e karikuesit', t: 'sel', num: 1, o: [[7.4, '7,4 kW (njëfazor)'], [11, '11 kW'], [22, '22 kW']], show: i => i.ev > 0 },
-      { k: 'inverter', l: 'Inverter dhe lidhje në rrjet', t: 'tog', w2: 1, show: i => i.cover === 'pv' },
-      { k: 'battery', l: 'Bateri për ruajtjen e energjisë', t: 'sel', num: 1, w2: 1, o: [[0, 'Pa bateri'], [5, '5 kWh'], [10, '10 kWh'], [15, '15 kWh'], [20, '20 kWh'], [30, '30 kWh'], [50, '50 kWh'], [100, '100 kWh']], show: i => i.cover === 'pv' },
       { k: 'led', l: 'Ndriçim LED nën strehë', t: 'tog', w2: 1 },
       { k: 'gutter', l: 'Ulluqe dhe ulluqe zbritëse', t: 'tog', w2: 1 },
       { k: 'closure', l: 'Mbyllje anësore', t: 'sel', w2: 1, o: [['none', 'Pa mbyllje'], ['back', 'Nga pas'], ['back_ends', 'Nga pas dhe në të dy anët']] }
@@ -60,7 +64,7 @@ window.ParkForm = (function () {
     if (f.t === 'model') return `<div class="f w2" data-k="model"><div class="models">${Object.keys(E.MODELS).map(k => `<button type="button" class="mcard" data-v="${k}" aria-pressed="false">${ICON[k]}<b>${esc(E.MODELS[k].name)}</b><small>${esc(E.MODELS[k].rows)}</small></button>`).join('')}</div></div>`;
     if (f.t === 'note') return `<div class="${cls}" data-k="${f.k}"><small class="help note">${esc(f.text)}</small></div>`;
     if (f.t === 'tog') return `<div class="${cls}" data-k="${f.k}"><label class="tog"><input type="checkbox" id="${id}"><span>${lab(f)}</span></label>${help}</div>`;
-    if (f.t === 'seg') return `<div class="${cls}" data-k="${f.k}"><span class="fl" id="${id}-l">${lab(f)}</span><div class="seg${f.wrap ? ' wrap' : ''}" role="group" aria-labelledby="${id}-l">${f.o.map(o => `<button type="button" data-v="${esc(o[0])}">${esc(o[1])}</button>`).join('')}</div>${help}</div>`;
+    if (f.t === 'seg') return `<div class="${cls}" data-k="${f.k}"><span class="fl" id="${id}-l">${lab(f)}</span><div class="seg${f.wrap ? ' wrap' : ''}${f.c3 ? ' c3' : ''}" role="group" aria-labelledby="${id}-l">${f.o.map(o => `<button type="button" data-v="${esc(o[0])}">${esc(o[1])}</button>`).join('')}</div>${help}</div>`;
     if (f.t === 'sel') return `<div class="${cls}" data-k="${f.k}"><label for="${id}">${lab(f)}</label><div class="inp"><select id="${id}">${f.o.map(o => `<option value="${esc(o[0])}">${esc(o[1])}</option>`).join('')}</select></div>${help}</div>`;
     return `<div class="${cls}" data-k="${f.k}"><label for="${id}" class="lbl-dyn">${lab(f)}</label><div class="inp"><input type="number" inputmode="decimal" id="${id}" min="${f.min}" max="${f.max}" step="${f.step}">${f.u ? `<span class="u">${f.u}</span>` : ''}</div>${help}</div>`;
   }
@@ -96,7 +100,7 @@ window.ParkForm = (function () {
       const v = i[f.k];
       if (f.t === 'model') el.querySelectorAll('.mcard').forEach(b => { b.setAttribute('aria-pressed', String(b.dataset.v === v)); b.disabled = !ed; });
       else if (f.t === 'seg') el.querySelectorAll('button').forEach(b => { b.setAttribute('aria-pressed', String(String(v) === b.dataset.v)); b.disabled = !ed; });
-      else if (f.t === 'tog') { const x = el.querySelector('input'); x.checked = !!v; x.disabled = !ed; }
+      else if (f.t === 'tog') { const x = el.querySelector('input'); x.checked = !!v; x.disabled = !ed || (f.k === 'inverter' && i.battery > 0); }
       else if (f.t === 'sel') { const x = el.querySelector('select'); x.value = String(v); x.disabled = !ed; }
       else if (f.t !== 'note') {
         const x = el.querySelector('input'); if (document.activeElement !== x) x.value = v; x.disabled = !ed;

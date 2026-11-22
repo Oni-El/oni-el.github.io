@@ -210,6 +210,7 @@
     if (curTab === 'm3d' && ParkView3D.ready) { ParkView3D.build(res); built = res; }
     if (curTab === 'offer') renderOffer();
     if (curTab === 'plan') $('#drPlan').innerHTML = ParkPlan(res);
+    if (curTab === 'schema') $('#drSchema').innerHTML = ParkSchema(res);
   }
   function renderChips() {
     const g = res.geo, c = [['Vende', g.spaces], ['Strehë', f1(g.L) + ' × ' + f1(g.D) + ' m'], ['Çeliku', fmt(res.qty.steel, 0) + ' kg'], ['kg/m²', f1(res.qty.steel / g.area)], ['Kolona', res.nCol]];
@@ -361,6 +362,8 @@
 
   /* ---------- oferta si dokument (PDF, WhatsApp, imazh) ---------- */
   const PRINT_PAL = { ink: '#18212a', dim: '#5d6b77', accent: '#d48c06', steel: '#2f6fa3', bg: '#ffffff', aisle: '#f1f4f6', ev: '#16a34a' };
+  const SCHEMA_PAL = { ink: '#18212a', dim: '#5d6b77', bg: '#ffffff', box: '#f3f6f8', line: '#c9d2d9', ac: '#2f6fa3', dc: '#d97706', ev: '#16a34a', accent: '#d48c06', pv: '#1d3a66' };
+  const hasElec = () => !!(res.pv || res.opts.ev || res.opts.led);
   function autoNo() {
     if (current) return code(current) + '-v' + ((current.offer_version || 0) + 1);
     const d = new Date(), p2 = n => String(n).padStart(2, '0');
@@ -396,6 +399,7 @@
     h += `<div class="figs">${o.figs.map(f => `<div><div class="l">${f[0]}</div><div class="v">${esc(f[1])}</div></div>`).join('')}</div>`;
     h += `<div><h4>Përshkrimi teknik</h4><table>${o.desc.map(d => `<tr><td>${esc(d[0])}</td><td>${esc(d[1])}</td></tr>`).join('')}</table></div>`;
     h += `<div><h4>Planimetria</h4><div class="drs">${ParkPlan(res, PRINT_PAL)}</div></div>`;
+    if (hasElec()) h += `<div><h4>Skema elektrike parimore</h4><div class="drs">${ParkSchema(res, SCHEMA_PAL)}</div></div>`;
     h += `<div><h4>Oferta ekonomike</h4><table class="pr">${o.priceRows.map(r => `<tr><td>${esc(r[0])}</td><td>${r[1]} ${o.curLabel}</td></tr>`).join('')}${o.totals.map(t => `<tr class="${t[2] ? 'tfin' : 'tsub'}"><td>${t[0]}</td><td>${t[1]} ${o.curLabel}</td></tr>`).join('')}</table><p class="note">${esc(o.kgLine)}</p></div>`;
     h += `<div><h4>Kushtet</h4><table><tr><td>Afati</td><td>${esc(o.offer.lead)}</td></tr><tr><td>Pagesa</td><td>${esc(o.offer.pay)}</td></tr><tr><td>Përfshihen</td><td>${esc(o.offer.incl)}</td></tr><tr><td>Nuk përfshihen</td><td>${esc(o.offer.excl)}</td></tr></table></div>${o.note ? `<p class="note">${esc(o.note)}</p>` : ''}`;
     h += `</div></article>`;
@@ -421,6 +425,7 @@
     try {
       const o = offerData();
       const draws = [await svgPNG(ParkPlan(res, PRINT_PAL), 1.6, 3)];
+      if (hasElec()) draws.push(await svgPNG(ParkSchema(res, SCHEMA_PAL), 1.4));
       const buf = OfferPDF.build(Object.assign(o, { img3d: shot(), img3dRatio: 16 / 9, draws }));
       download('Oferta ' + safeName(o.offer.no) + ' - ' + safeName(o.offer.client || o.title) + '.pdf', new Blob([buf], { type: 'application/pdf' }));
     } catch (e) { console.error(e); toast('PDF-ja nuk u krijua: ' + (e.message || e)); }
@@ -474,9 +479,10 @@
   function showTab(t) {
     curTab = t;
     $$('.vtabs button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.t === t)));
-    ['m3d', 'plan', 'calc', 'cost', 'offer'].forEach(k => { $('#pane-' + k).hidden = k !== t; });
+    ['m3d', 'plan', 'schema', 'calc', 'cost', 'offer'].forEach(k => { $('#pane-' + k).hidden = k !== t; });
     $('.viz').classList.toggle('long', t === 'cost' || t === 'offer' || t === 'calc');
     if (t === 'm3d') { ParkView3D.resize(); if (res) { ParkView3D.build(res); built = res; } } else if (t === 'plan' && res) $('#drPlan').innerHTML = ParkPlan(res);
+    else if (t === 'schema' && res) $('#drSchema').innerHTML = ParkSchema(res);
     else if (t === 'cost') renderCost(); else if (t === 'offer') renderOffer();
   }
   async function init() {

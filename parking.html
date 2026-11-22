@@ -128,12 +128,16 @@
     .mcard[aria-pressed="true"] { border-color: var(--accent); background: rgba(244,160,18,.08) }
     .mcard[aria-pressed="true"] svg { color: var(--accent) }
     .mcard:disabled { cursor: default }
-    .seg.wrap { flex-wrap: wrap } .seg.wrap button { flex: 1 1 45% }
+    .seg.wrap { flex-wrap: wrap } .seg.wrap button { flex: 1 1 45% } .seg.wrap.c3 button { flex: 1 1 30% }
     .help.note { color: var(--muted); background: var(--panel-2); border-left: 3px solid var(--accent); padding: 7px 10px; border-radius: 3px }
     .chip.pv b { color: var(--accent) }
     .pvcard { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; font-size: 13px; color: var(--muted) }
     .pvcard b { color: var(--ink) }
     @media (max-width: 340px) { .models { grid-template-columns: 1fr } }
+    .schema svg { width: 100%; height: auto; display: block; border-radius: 6px }
+    .schema { overflow-x: auto } .schema svg { min-width: 760px }
+    .drnote.mob { display: none; text-align: center; padding: 0 0 8px } @media (max-width: 760px) { .drnote.mob { display: block } }
+    .viz { grid-template-columns: minmax(0, 1fr) }
 </style>
 </head>
 <body>
@@ -153,7 +157,7 @@
       <div class="cfg">
         <div id="cfgSteps" class="cfg"></div>
         <section class="step" id="contactStep">
-          <h3><span class="sn">7</span>Të dhënat tuaja</h3>
+          <h3><span class="sn">8</span>Të dhënat tuaja</h3>
           <form id="reqForm" class="fields" novalidate>
             <div class="f w2"><label for="r-name">Emri dhe mbiemri *</label><div class="inp"><input id="r-name" name="name" required autocomplete="name"></div></div>
             <div class="f w2"><label for="r-company">Kompania</label><div class="inp"><input id="r-company" name="company" autocomplete="organization"></div></div>
@@ -177,6 +181,7 @@
         <div class="vtabs" role="tablist">
           <button type="button" role="tab" data-t="m3d" aria-selected="true">Modeli 3D</button>
           <button type="button" role="tab" data-t="plan" aria-selected="false">Planimetria</button>
+          <button type="button" role="tab" data-t="schema" aria-selected="false">Skema elektrike</button>
         </div>
         <div id="pane-m3d">
           <div class="viewer nodl" id="viewer">
@@ -188,6 +193,7 @@
           </div>
         </div>
         <div id="pane-plan" hidden><div class="drawing nodl" id="drPlan"></div><p class="drnote">Skicë paraprake për ofertë. Vizatimet e zbatimit përgatiten pas konfirmimit të porosisë.</p></div>
+        <div id="pane-schema" hidden><p class="drnote mob">← Rrëshqite skemën anash për ta parë të plotë →</p><div class="drawing schema nodl" id="drSchema"></div><p class="drnote">Skemë parimore: si lidhen panelet diellore, bateria, karikuesit dhe ndriçimi me rrjetin. Projekti elektrik i zbatimit përgatitet pas konfirmimit të porosisë.</p></div>
         <div class="chips" id="chips"></div>
         <div class="pvcard" id="pvCard" hidden></div>
       </div>
@@ -202,6 +208,7 @@
   <script src="kapanon-engine.js"></script>
   <script src="parking-engine.js"></script>
   <script src="parking-view3d.js"></script>
+  <script src="parking-schema.js"></script>
   <script src="parking-form.js"></script>
   <script src="parking-client.js"></script>
 </body>
